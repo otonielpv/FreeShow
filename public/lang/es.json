@@ -908,7 +908,8 @@
         "lock_to_output": "Bloquear a la salida",
         "place_under_slide": "Colocar debajo de la diapositiva",
         "toggle_clock": "Alternar reloj",
-        "move_connections": "Mover todas la conexiones a este"
+        "move_connections": "Mover todas la conexiones a este",
+        "show_in_outputs": "Mostrar en salidas"
     },
     "tools": {
         "notes": "Notas",

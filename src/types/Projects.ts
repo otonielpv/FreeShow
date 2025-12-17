@@ -28,6 +28,7 @@ export interface ProjectShowRef extends ShowRef {
     data?: any // section settings
     scheduleLength?: number // currently only from PCO import
     played?: boolean
+    bindings?: string[] // bind show to specific outputs
 }
 
 export interface ShowRef {

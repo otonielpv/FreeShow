@@ -920,7 +920,8 @@
         "lock_to_output": "Lock to output",
         "place_under_slide": "Place under slide",
         "toggle_clock": "Toggle clock",
-        "move_connections": "Move all connections to this"
+        "move_connections": "Move all connections to this",
+        "show_in_outputs": "Show in outputs"
     },
     "tools": {
         "notes": "Notes",

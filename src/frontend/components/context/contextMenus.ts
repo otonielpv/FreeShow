@@ -128,6 +128,7 @@ export const contextMenuItems: { [key: string]: ContextMenuItem } = {
     recolor: { label: "actions.recolor", icon: "color", iconColor: "#6effbe" },
     actions: { label: "actions.slide_actions", icon: "actions", iconColor: "#d497ff", items: ["LOAD_actions"] },
     bind_to: { label: "actions.bind_to", icon: "bind", iconColor: "#d497ff", items: ["LOAD_bind_slide"] },
+    show_in_outputs: { label: "context.show_in_outputs", icon: "outputs", iconColor: "#d497ff", items: ["LOAD_show_outputs"] },
     remove_layers: { label: "actions.remove_layers", icon: "remove_layers", iconColor: "#ff5454", items: ["LOAD_remove_layers"] },
     set_key: { label: "actions.set_key", icon: "chords", items: ["LOAD_keys"] },
     chord_list: { label: "edit.chords", icon: "chords", items: ["LOAD_chord_list"] },
@@ -280,12 +281,12 @@ export const contextMenuLayouts: { [key: string]: string[] } = {
     project_template: ["rename", "delete"],
     folder: ["rename", "duplicate", "delete"],
     folder_readonly: ["sort_projects_by"],
-    project_media: ["play", "play_no_audio", "play_no_filters", "SEPARATOR", "remove", "SEPARATOR", "mark_played"],
+    project_media: ["play", "play_no_audio", "play_no_filters", "SEPARATOR", "remove", "SEPARATOR", "mark_played", "SEPARATOR", "show_in_outputs"],
     project_audio: ["remove", "SEPARATOR", "mark_played"],
     project_player: ["remove"],
     // "delete" removed as too many users thought it just removed the show from the project
     // "duplicate" removed as it was people did not get that it only duplicated the reference in project, and not the entire show (keyboard / menu bar shortcuts can be used)
-    project_show: ["remove", "SEPARATOR", "mark_played", "private", "SEPARATOR", "rename"],
+    project_show: ["remove", "SEPARATOR", "mark_played", "private", "SEPARATOR", "rename", "SEPARATOR", "show_in_outputs"],
     pco_item: ["unlink_pco"],
     project_section: ["recolor", "SEPARATOR", "remove"],
     project_overlay: ["remove"],

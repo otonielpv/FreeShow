@@ -1563,6 +1563,40 @@ const clickActions = {
         })
         // _show().slides([slideID!]).set({ key: "items", value: items })
     },
+    show_outputs: (obj: ObjData) => {
+        const projectId = get(activeProject)
+        if (!projectId) return
+
+        const outputId = obj.menu?.id || ""
+        if (!outputId) return
+
+        const indexes: number[] = obj.sel?.data.map(({ index }) => index) || []
+        if (indexes.length === 0) return
+
+        projects.update((a) => {
+            if (!a[projectId]?.shows) return a
+
+            indexes.forEach((index) => {
+                const show = a[projectId].shows[index]
+                if (!show) return
+
+                // Initialize bindings array if it doesn't exist
+                if (!show.bindings) show.bindings = []
+
+                // Toggle the output binding
+                const existingIndex = show.bindings.indexOf(outputId)
+                if (existingIndex >= 0) {
+                    // Remove binding
+                    show.bindings.splice(existingIndex, 1)
+                } else {
+                    // Add binding
+                    show.bindings.push(outputId)
+                }
+            })
+
+            return a
+        })
+    },
     dynamic_values: (obj: ObjData) => {
         const sel = getSelectionRange()
         let lineIndex = sel.findIndex((a) => a?.start !== undefined)

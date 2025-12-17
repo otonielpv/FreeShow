@@ -31,6 +31,27 @@ import { _show } from "./shows"
 import { addZero, getMonthName, getWeekday, joinTime, joinTimeBig, secondsToTime } from "./time"
 import { stopTimers } from "./timerTick"
 
+// Helper function to get project show bindings for the current show
+export function getProjectShowBindings(showId?: string): string[] | undefined {
+    const activeProjectId = get(activeProject)
+    if (!activeProjectId) return undefined
+
+    const project = get(projects)[activeProjectId]
+    if (!project?.shows) return undefined
+
+    const currentShowId = showId || get(activeShow)?.id
+    const currentShowIndex = get(activeShow)?.index
+
+    // If we have an index, use it to get the exact show reference
+    if (currentShowIndex !== undefined && currentShowIndex !== null) {
+        return project.shows[currentShowIndex]?.bindings
+    }
+
+    // Fallback: find by id (first match)
+    const projectShow = project.shows.find((s) => s.id === currentShowId)
+    return projectShow?.bindings
+}
+
 const getProjectIndex = {
     next: (index: number | null, items: ProjectShowRef[]) => {
         // change active show in project

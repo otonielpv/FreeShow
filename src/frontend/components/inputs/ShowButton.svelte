@@ -123,6 +123,12 @@
         let outputId: string = getActiveOutputs($outputs, false, true, true)[0]
         let currentOutput = $outputs[outputId] || {}
 
+        // Get project show bindings if available
+        let projectBindings: string[] | undefined
+        if (index !== null && $activeProject) {
+            projectBindings = $projects[$activeProject]?.shows?.[index]?.bindings
+        }
+
         if (type === "show" && $showsCache[id]?.settings && $showsCache[id].layouts[$showsCache[id].settings.activeLayout]?.slides?.length) {
             let layoutRef = getLayoutRef()
             let firstEnabledIndex = layoutRef.findIndex((a) => !a.data.disabled)
@@ -131,7 +137,7 @@
             let slide = currentOutput.out?.slide || null
             if (slide?.id === id && slide?.index === firstEnabledIndex && slide?.layout === $showsCache[id].settings.activeLayout) return
 
-            setOutput("slide", { id, layout: $showsCache[id].settings.activeLayout, index: firstEnabledIndex })
+            setOutput("slide", { id, layout: $showsCache[id].settings.activeLayout, index: firstEnabledIndex, bindings: projectBindings })
         } else if (type === "image" || type === "video") {
             let outputStyle = $styles[currentOutput.style || ""]
             const mediaData = $media[id] || {}
@@ -141,7 +147,7 @@
             const shouldLoop = videoType === "background" ? show.loop || true : false
             const shouldBeMuted = videoType === "background" ? show.muted || true : false
 
-            let out = { path: id, muted: shouldBeMuted, loop: shouldLoop, startAt: 0, type: type, ...mediaStyle }
+            let out = { path: id, muted: shouldBeMuted, loop: shouldLoop, startAt: 0, type: type, bindings: projectBindings, ...mediaStyle }
 
             // clear slide
             if (videoType === "foreground" || (videoType !== "background" && (type === "image" || !shouldLoop))) clearSlide()
@@ -202,6 +208,10 @@
 
                 {#if show.layoutInfo?.name}
                     <span class="layout" style="opacity: 0.6;font-style: italic;font-size: 0.9em;">{show.layoutInfo.name}</span>
+                {/if}
+
+                {#if show.bindings?.length}
+                    <Icon id="bind" size={0.8} style="opacity: 0.6; margin-left: 5px;" title={show.bindings.map((b) => $outputs[b]?.name || b).join(", ")} />
                 {/if}
 
                 {#if show.scheduleLength !== undefined && Number(show.scheduleLength)}

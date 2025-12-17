@@ -1,6 +1,6 @@
 import { get } from "svelte/store"
 import type { Media } from "../../../types/Show"
-import { actions, actionTags, activeActionTagFilter, activeEdit, activeMediaTagFilter, activeTagFilter, activeVariableTagFilter, contextData, drawerTabsData, globalTags, groups, media, mediaTags, outputs, overlays, selected, shows, sorted, variables, variableTags } from "../../stores"
+import { actions, actionTags, activeActionTagFilter, activeEdit, activeMediaTagFilter, activeProject, activeTagFilter, activeVariableTagFilter, contextData, drawerTabsData, globalTags, groups, media, mediaTags, outputs, overlays, projects, selected, shows, sorted, variables, variableTags } from "../../stores"
 import { translateText } from "../../utils/language"
 import { drawerTabs } from "../../values/tabs"
 import { actionData } from "../actions/actionData"
@@ -339,7 +339,63 @@ const loadActions = {
 
         return contextOutputList
     },
-    bind_item: () => loadActions.bind_slide([], true)
+    bind_item: () => loadActions.bind_slide([], true),
+    show_outputs: () => {
+        // Get all outputs (normal and stage)
+        const allOutputs = keysToID(get(outputs))
+        
+        // Separate normal outputs and stage outputs
+        const normalOutputs = allOutputs.filter((a) => !a.stageOutput && a.enabled)
+        const stageOutputs = allOutputs.filter((a) => a.stageOutput && a.enabled)
+        
+        let contextOutputList: (ContextMenuItem | "SEPARATOR")[] = []
+        
+        // Add normal outputs
+        if (normalOutputs.length > 0) {
+            contextOutputList.push(...sortByName(normalOutputs).map((a) => ({ 
+                id: a.id, 
+                label: a.name, 
+                translate: false,
+                icon: "screen"
+            })))
+        }
+        
+        // Add separator if both types exist
+        if (normalOutputs.length > 0 && stageOutputs.length > 0) {
+            contextOutputList.push("SEPARATOR")
+        }
+        
+        // Add stage outputs
+        if (stageOutputs.length > 0) {
+            contextOutputList.push(...sortByName(stageOutputs).map((a) => ({ 
+                id: a.id, 
+                label: a.name, 
+                translate: false,
+                icon: "stage"
+            })))
+        }
+        
+        // Get current bindings for the selected project show
+        const projectId = get(activeProject)
+        if (projectId && get(selected).data[0]?.index !== undefined) {
+            const index = get(selected).data[0].index
+            const currentBindings = get(projects)[projectId]?.shows?.[index]?.bindings || []
+            
+            // Mark selected outputs as enabled
+            contextOutputList = contextOutputList.map((item) => {
+                if (typeof item !== "string" && currentBindings.includes(item.id!)) {
+                    item.enabled = true
+                }
+                return item
+            })
+        }
+        
+        if (contextOutputList.length === 0) {
+            return [{ label: "empty.general", disabled: true }]
+        }
+        
+        return contextOutputList
+    }
 }
 
 function setContextData(key: string, data: boolean | string | number) {
