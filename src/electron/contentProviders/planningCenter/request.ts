@@ -5,6 +5,7 @@
  */
 
 import path from "path"
+import fs from "fs"
 import { uid } from "uid"
 import { ToMain } from "../../../types/IPC/ToMain"
 import type { LessonsData } from "../../../types/Main"
@@ -291,12 +292,24 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
     const song = songArrangement.attributes
     const sequence = item.attributes.custom_arrangement_sequence || item.custom_arrangement_sequence || song.sequence || []
 
-    // DEBUG: Log what Planning Center sends
-    console.log('\n=== PLANNING CENTER DEBUG ===')
-    console.log('Song:', songData.attributes.title)
-    console.log('Full item object:', JSON.stringify(item, null, 2))
-    console.log('Full songArrangement object:', JSON.stringify(songArrangement, null, 2))
-    console.log('Sequence from PCO:', JSON.stringify(sequence, null, 2))
+    // DEBUG: Write what Planning Center sends to file
+    const debugLogPath = path.join(getDataFolderPath('planningcenter'), 'pco-debug.log')
+    const debugData = [
+        '\n=== PLANNING CENTER DEBUG ===',
+        `Song: ${songData.attributes.title}`,
+        'Full item object:',
+        JSON.stringify(item, null, 2),
+        'Full songArrangement object:',
+        JSON.stringify(songArrangement, null, 2),
+        'Sequence from PCO:',
+        JSON.stringify(sequence, null, 2)
+    ].join('\n')
+    
+    try {
+        fs.appendFileSync(debugLogPath, debugData + '\n')
+    } catch (err) {
+        console.error('Failed to write debug log:', err)
+    }
 
     let sections: SongSection[] =
         (
@@ -306,7 +319,12 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
             })
         )[0]?.attributes.sections || []
 
-    console.log('Sections from PCO:', JSON.stringify(sections, null, 2))
+    const sectionsDebug = ['Sections from PCO:', JSON.stringify(sections, null, 2)].join('\n')
+    try {
+        fs.appendFileSync(debugLogPath, sectionsDebug + '\n')
+    } catch (err) {
+        console.error('Failed to write sections debug:', err)
+    }
 
     if (!sections.length) {
         sections = sequence.map((id: any) => ({ label: id, lyrics: "" }))
@@ -316,10 +334,23 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
 
     if (sequence.length && sections.length) {
         sections = getOrderedSections(sections, sequence)
-        console.log('Ordered sections count:', sections.length)
-        console.log('Ordered sections labels:', sections.map(s => s.label))
+        const orderedDebug = [
+            `Ordered sections count: ${sections.length}`,
+            `Ordered sections labels: ${sections.map(s => s.label).join(', ')}`
+        ].join('\n')
+        try {
+            fs.appendFileSync(debugLogPath, orderedDebug + '\n')
+        } catch (err) {
+            console.error('Failed to write ordered sections debug:', err)
+        }
     }
-    console.log('=== END DEBUG ===\n')
+    
+    try {
+        fs.appendFileSync(debugLogPath, '=== END DEBUG ===\n\n')
+        console.log(`PCO Debug data written to: ${debugLogPath}`)
+    } catch (err) {
+        console.error('Failed to finalize debug log:', err)
+    }
 
     const show = getShow(songData, song, sections)
     const showId = `pcosong_${songData.id}`
