@@ -294,6 +294,8 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
     // DEBUG: Log what Planning Center sends
     console.log('\n=== PLANNING CENTER DEBUG ===')
     console.log('Song:', songData.attributes.title)
+    console.log('Full item object:', JSON.stringify(item, null, 2))
+    console.log('Full songArrangement object:', JSON.stringify(songArrangement, null, 2))
     console.log('Sequence from PCO:', JSON.stringify(sequence, null, 2))
 
     let sections: SongSection[] =
