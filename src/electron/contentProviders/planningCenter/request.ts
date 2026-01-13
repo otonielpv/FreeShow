@@ -59,6 +59,7 @@ interface ProjectItem {
         title?: string
         description?: string
         length?: number
+        custom_arrangement_sequence?: any[]
     }
     relationships: {
         arrangement: {
@@ -288,7 +289,7 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
     if (!songArrangement?.id) return null
 
     const song = songArrangement.attributes
-    const sequence = item.custom_arrangement_sequence || song.sequence || []
+    const sequence = item.attributes.custom_arrangement_sequence || item.custom_arrangement_sequence || song.sequence || []
 
     let sections: SongSection[] =
         (
