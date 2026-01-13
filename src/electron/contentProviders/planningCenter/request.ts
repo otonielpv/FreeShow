@@ -291,6 +291,11 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
     const song = songArrangement.attributes
     const sequence = item.attributes.custom_arrangement_sequence || item.custom_arrangement_sequence || song.sequence || []
 
+    // DEBUG: Log what Planning Center sends
+    console.log('\n=== PLANNING CENTER DEBUG ===')
+    console.log('Song:', songData.attributes.title)
+    console.log('Sequence from PCO:', JSON.stringify(sequence, null, 2))
+
     let sections: SongSection[] =
         (
             await pcoRequest({
@@ -298,6 +303,8 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
                 endpoint: `${arrangementEndpoint}/sections`
             })
         )[0]?.attributes.sections || []
+
+    console.log('Sections from PCO:', JSON.stringify(sections, null, 2))
 
     if (!sections.length) {
         sections = sequence.map((id: any) => ({ label: id, lyrics: "" }))
@@ -307,7 +314,10 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
 
     if (sequence.length && sections.length) {
         sections = getOrderedSections(sections, sequence)
+        console.log('Ordered sections count:', sections.length)
+        console.log('Ordered sections labels:', sections.map(s => s.label))
     }
+    console.log('=== END DEBUG ===\n')
 
     const show = getShow(songData, song, sections)
     const showId = `pcosong_${songData.id}`
