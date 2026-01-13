@@ -326,7 +326,8 @@ function getOrderedSections(sections: SongSection[], sequence: any[]): SongSecti
     const orderedSections: SongSection[] = []
     sequence.forEach((label) => {
         if (sectionMap[label]) {
-            orderedSections.push(sectionMap[label])
+            // Push a copy of the section to preserve all repetitions from the sequence
+            orderedSections.push({ ...sectionMap[label] })
         }
     })
 
