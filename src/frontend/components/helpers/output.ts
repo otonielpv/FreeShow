@@ -1434,12 +1434,12 @@ export function getMetadata(show: Show | undefined, currentStyle: Styles, outSli
     const showCategory = get(categories)[show.category || ""] || {}
     const metadataValues = currentStyle.metadata || showCategory.metadata || {}
     const display = metadataValues.display || "never"
-    if (display === "never") return []
+    if (typeof display !== "string" || display === "never") return []
 
     const ref = clone(_show(outSlide.id).layouts([outSlide.layout]).ref()[0] || [])
     const firstActiveSlideIndex = ref.findIndex((a) => !a.data.disabled)
     const lastActiveSlideIndex = ref.length - 1 - [...ref].reverse().findIndex((a) => !a.data.disabled)
-    const displayMetadata = display === "always" || (display?.includes("first") && outSlide?.index === firstActiveSlideIndex) || (display?.includes("last") && outSlide?.index === lastActiveSlideIndex)
+    const displayMetadata = display === "always" || (display.includes("first") && outSlide?.index === firstActiveSlideIndex) || (display.includes("last") && outSlide?.index === lastActiveSlideIndex)
     if (!displayMetadata) return []
 
     // template
