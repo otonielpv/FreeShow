@@ -621,9 +621,10 @@ const slideDrop = {
         }
 
         h.id = "SLIDES"
-        const slides = drag.data.map((a) => ({ id: (a.id?.length > 11 ? "" : a.id) || uid(), group: removeExtension(a.name || ""), color: null, settings: {}, notes: "", items: [] }))
+        const slides = drag.data.map((a) => ({ id: (a.id?.length > 11 ? "" : a.id) || uid(), group: null, color: null, settings: {}, notes: "", items: [] }))
+        const layouts = data.map(() => ({}))
 
-        h.newData = { index: drop.index, data: slides, layout: { backgrounds: data } }
+        h.newData = { index: drop.index, data: slides, layouts, layout: { backgrounds: data } }
 
         return h
     },
