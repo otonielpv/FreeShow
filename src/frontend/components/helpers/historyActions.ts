@@ -443,13 +443,36 @@ export const historyActions = ({ obj, undo = null }: any) => {
             data = (deleting ? obj.oldData : obj.newData) || {}
 
             if (initializing) {
-                data.remember = { showId: get(activeShow)?.id, layout: _show().get("settings.activeLayout") }
+                const locationShowId = obj.location?.show?.id
+                const locationLayout = obj.location?.layout
+                const activeShowId = get(activeShow)?.id
+                const showId = data.showId || locationShowId || activeShowId
+                const layout = data.layout || locationLayout || (showId ? _show(showId).get("settings.activeLayout") : undefined)
+
+                data.remember = { showId, layout }
             }
 
             let slides = clone(data?.data) || []
 
-            const { showId, layout } = data.remember || {}
-            if (!showId || !layout) return
+            const { showId } = data.remember || {}
+            if (!showId) return
+
+            let layout = data.remember?.layout
+            const showLayouts = _show(showId).get("layouts") || {}
+            if (!layout || !showLayouts[layout]) {
+                const existingLayoutIds = Object.keys(showLayouts)
+
+                if (existingLayoutIds.length) {
+                    layout = existingLayoutIds[0]
+                } else {
+                    layout = "default"
+                    _show(showId).layouts().add(layout, { name: "Default", notes: "", slides: [] })
+                }
+
+                _show(showId).set({ key: "settings.activeLayout", value: layout })
+                data.remember.layout = layout
+            }
+
             const ref = _show(showId).layouts([layout]).ref()[0] || []
             if (!deleting) data.index = data.index ?? ref.length
             let index = data.index
@@ -626,6 +649,12 @@ export const historyActions = ({ obj, undo = null }: any) => {
                                 .slides()
                                 .add([{ ...layoutValue, id: slideId }])
                         }
+                    } else {
+                        // add regular slide to layout (images, videos, etc.)
+                        _show(showId)
+                            .layouts([layout])
+                            .slides()
+                            .add([{ ...layoutValue, id: slideId }])
                     }
 
                     increaseEditIndex()
