@@ -240,7 +240,7 @@ export const dropActions = {
         const templateId = drag.data[0]
 
         if (drag.id !== "template") {
-            const validAllSlidesDrop = ["media", "files", "camera", "screen", "ndi", "audio", "audio_effect", "show"]
+            const validAllSlidesDrop = ["media", "files", "camera", "screen", "ndi"]
             if (validAllSlidesDrop.includes(drag.id || "")) {
                 return dropActions.slide({ drag, drop: { ...drop, id: "slides" } }, h, keys)
             }
