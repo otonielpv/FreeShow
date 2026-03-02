@@ -38,6 +38,9 @@ export function validateDrop(id: string, selectedId: SelectIds | null, children 
 }
 
 export async function ondrop(e: any, id: string) {
+    if (e?._freeShowDropHandled) return
+    if (e) e._freeShowDropHandled = true
+
     // let data: string = e.dataTransfer.getData("text")
     const h = { id: null, location: { page: get(activePage) } }
     const sel = get(selected)

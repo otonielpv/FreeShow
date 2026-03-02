@@ -497,6 +497,9 @@ export const historyActions = ({ obj, undo = null }: any) => {
             if (data.layouts) data.layouts.reverse()
             if (data.layout?.backgrounds?.[1]) data.layout.backgrounds.reverse()
 
+            const addedSlideIds: string[] = []
+            const addedLayoutData: any[] = []
+
             slides.forEach((slide, i) => {
                 let slideId = slide.id
                 delete slide.id
@@ -581,11 +584,14 @@ export const historyActions = ({ obj, undo = null }: any) => {
                     const slideData = clone(slide)
                     if (data.addItems === false) slideData.items = []
 
+                    addedSlideIds.push(slideId)
+
                     _show(showId).slides([slideId]).add([slideData], isParent)
 
                     // layout
                     const layoutValue = data.layouts?.[i] || {}
                     layoutValue.id = slideId
+                    addedLayoutData.push(clone(layoutValue))
 
                     // TODO: add media to show if it doesent have it
                     // if (data.background && !_show(showId).media([data.background]).get()[0]) {
@@ -670,6 +676,29 @@ export const historyActions = ({ obj, undo = null }: any) => {
                     // })
                 }
             })
+
+            if (!deleting && addedSlideIds.length) {
+                showsCache.update((a) => {
+                    if (!a[showId]?.layouts?.[layout]) return a
+
+                    const currentSlides = a[showId].slides || {}
+                    const layoutSlides = a[showId].layouts[layout].slides || []
+
+                    a[showId].layouts[layout].slides = layoutSlides.filter((layoutSlide) => !!currentSlides[layoutSlide.id])
+
+                    addedSlideIds.forEach((addedId, addedIndex) => {
+                        const existsInLayout = a[showId].layouts[layout].slides.find((layoutSlide) => layoutSlide.id === addedId)
+                        if (existsInLayout || !currentSlides[addedId]) return
+
+                        const newLayoutSlide = { id: addedId, ...(addedLayoutData[addedIndex] || {}) }
+                        delete (newLayoutSlide as any).id
+                        a[showId].layouts[layout].slides.push({ id: addedId, ...newLayoutSlide })
+                    })
+
+                    a[showId].timestamps.modified = new Date().getTime()
+                    return a
+                })
+            }
 
             if (deleting) {
                 if (type === "delete" || type === "delete_group") {
