@@ -793,26 +793,17 @@ export const historyActions = ({ obj, undo = null }: any) => {
                 if (templateId && !slideId && previousTemplateId !== templateId) _show(data.remember.showId).set({ key: "settings.template", value: slideId ? null : templateId })
 
                 const template = clone(get(templates)[templateId])
-                const hasTextContent = Object.values(slides || {}).some((currentSlide: any) => currentSlide?.items?.some((item: any) => Array.isArray(item?.lines) && item.lines.length))
-
                 const maxLines = template?.settings?.maxLinesPerSlide
-                if (hasTextContent && maxLines !== "0" && !isNaN(Number(maxLines))) {
+                if (maxLines !== "0" && !isNaN(Number(maxLines))) {
                     slides = splitToMaxLines(Number(maxLines))
                     show.slides = slides
                 }
                 const brLongLines = template?.settings?.breakLongLines
-                if (hasTextContent && brLongLines !== "0" && !isNaN(Number(brLongLines))) {
+                if (brLongLines !== "0" && !isNaN(Number(brLongLines))) {
                     slides = breakLongLines(data.remember.showId, Number(brLongLines))
                     show.slides = slides
                 }
                 updateSlidesWithTemplate(template)
-
-                const validSlideIds = new Set(Object.keys(show.slides || {}))
-                Object.keys(show.layouts || {}).forEach((layoutId) => {
-                    const currentLayout = show.layouts[layoutId]
-                    if (!currentLayout?.slides?.length) return
-                    currentLayout.slides = currentLayout.slides.filter((layoutSlide: any) => validSlideIds.has(layoutSlide.id))
-                })
 
                 if (get(activePage) === "edit") refreshEditSlide.set(true)
             }
