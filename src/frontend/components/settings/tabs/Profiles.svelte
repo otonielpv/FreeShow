@@ -100,13 +100,19 @@
     $: templateCategoryList = sortByName(keysToID($templateCategories)).filter((a) => a.name)
     $: templateCategoryAccess = currentProfile.access.templates || {}
 
-    const functions: string[] = ["actions", "timers", "variables", "triggers"]
-    $: functionSectionsList = functions.map((id) => ({ id, name: `tabs.${id}` }))
-    $: actionTagsList = sortByName(keysToID($actionTags)).map((a) => ({ id: functionActionTagAccessKey(a.id), name: `Action tag: ${a.name || "—"}` }))
-    $: variableTagsList = sortByName(keysToID($variableTags)).map((a) => ({ id: functionVariableTagAccessKey(a.id), name: `Variable tag: ${a.name || "—"}` }))
-    $: timersList = sortByName(keysToID($timers)).map((a) => ({ id: functionTimerAccessKey(a.id), name: `Timer: ${a.name || "—"}` }))
-    $: variablesList = sortByName(keysToID($variables)).map((a) => ({ id: functionVariableAccessKey(a.id), name: `Variable: ${a.name || "—"}` }))
-    $: functionsList = [...functionSectionsList, ...actionTagsList, ...variableTagsList, ...timersList, ...variablesList]
+    $: functionsList = [
+        { id: "actions", name: "tabs.actions" },
+        ...sortByName(keysToID($actionTags)).map((a) => ({ id: functionActionTagAccessKey(a.id), name: a.name || "—", child: true })),
+
+        { id: "timers", name: "tabs.timers" },
+        ...sortByName(keysToID($timers)).map((a) => ({ id: functionTimerAccessKey(a.id), name: a.name || "—", child: true })),
+
+        { id: "variables", name: "tabs.variables" },
+        ...sortByName(keysToID($variableTags)).map((a) => ({ id: functionVariableTagAccessKey(a.id), name: a.name || "—", child: true })),
+        ...sortByName(keysToID($variables)).map((a) => ({ id: functionVariableAccessKey(a.id), name: a.name || "—", child: true })),
+
+        { id: "triggers", name: "tabs.triggers" }
+    ]
     $: functionsAccess = currentProfile.access.functions || {}
 
     $: mediaAccess = currentProfile.access.media || {}
@@ -199,7 +205,7 @@
 
             <div slot="menu">
                 {#each a.list as item}
-                    <InputRow>
+                    <InputRow style={item.child ? "margin-left: 20px;" : ""}>
                         <MaterialMultiButtons label={item.name} value={getAccessLevel(a.access, item.id)} options={getInputs(a.access.global, a.id)} on:click={(e) => updateAccess(a.id, item.id, e.detail)} noLabels />
                     </InputRow>
                 {/each}
