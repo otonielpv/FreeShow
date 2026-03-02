@@ -2,7 +2,7 @@ import { get } from "svelte/store"
 import { uid } from "uid"
 import type { Item, Slide, SlideData, Template } from "../../../types/Show"
 import { breakLongLines, removeItemValues } from "../../show/slides"
-import { activeEdit, activePage, activePopup, activeProject, activeShow, alertMessage, cachedShowsData, deletedShows, groups, notFound, projects, refreshEditSlide, renamedShows, saved, shows, showsCache, templates } from "../../stores"
+import { activeEdit, activePage, activePopup, activeProject, activeShow, alertMessage, cachedShowsData, deletedShows, groups, notFound, projects, refreshEditSlide, renamedShows, shows, showsCache, templates } from "../../stores"
 import { save } from "../../utils/save"
 import { EMPTY_SHOW_SLIDE } from "../../values/empty"
 import { customActionActivation } from "../actions/actions"
@@ -417,17 +417,8 @@ export const historyActions = ({ obj, undo = null }: any) => {
                 if (initializing) save()
                 // delete showsCache (to reduce lag)
                 setTimeout(() => {
-                    if (!get(saved)) return
-
-                    const currentActiveShow = get(activeShow)
-                    const keepId = currentActiveShow?.type === "show" ? currentActiveShow.id : null
-
-                    showsCache.update((cache) => {
-                        if (keepId && cache[keepId]) return { [keepId]: cache[keepId] }
-                        return {}
-                    })
-
-                    if (!keepId) activeShow.set(null)
+                    showsCache.set({})
+                    activeShow.set(null)
                 }, 2000)
             }
 
@@ -513,9 +504,6 @@ export const historyActions = ({ obj, undo = null }: any) => {
             if (data.layouts) data.layouts.reverse()
             if (data.layout?.backgrounds?.[1]) data.layout.backgrounds.reverse()
 
-            const addedSlideIds: string[] = []
-            const addedLayoutData: any[] = []
-
             slides.forEach((slide, i) => {
                 let slideId = slide.id
                 delete slide.id
@@ -600,14 +588,11 @@ export const historyActions = ({ obj, undo = null }: any) => {
                     const slideData = clone(slide)
                     if (data.addItems === false) slideData.items = []
 
-                    addedSlideIds.push(slideId)
-
                     _show(showId).slides([slideId]).add([slideData], isParent)
 
                     // layout
                     const layoutValue = data.layouts?.[i] || {}
                     layoutValue.id = slideId
-                    addedLayoutData.push(clone(layoutValue))
 
                     // TODO: add media to show if it doesent have it
                     // if (data.background && !_show(showId).media([data.background]).get()[0]) {
@@ -692,29 +677,6 @@ export const historyActions = ({ obj, undo = null }: any) => {
                     // })
                 }
             })
-
-            if (!deleting && addedSlideIds.length) {
-                showsCache.update((a) => {
-                    if (!a[showId]?.layouts?.[layout]) return a
-
-                    const currentSlides = a[showId].slides || {}
-                    const layoutSlides = a[showId].layouts[layout].slides || []
-
-                    a[showId].layouts[layout].slides = layoutSlides.filter((layoutSlide) => !!currentSlides[layoutSlide.id])
-
-                    addedSlideIds.forEach((addedId, addedIndex) => {
-                        const existsInLayout = a[showId].layouts[layout].slides.find((layoutSlide) => layoutSlide.id === addedId)
-                        if (existsInLayout || !currentSlides[addedId]) return
-
-                        const newLayoutSlide = { id: addedId, ...(addedLayoutData[addedIndex] || {}) }
-                        delete (newLayoutSlide as any).id
-                        a[showId].layouts[layout].slides.push({ id: addedId, ...newLayoutSlide })
-                    })
-
-                    a[showId].timestamps.modified = new Date().getTime()
-                    return a
-                })
-            }
 
             if (deleting) {
                 if (type === "delete" || type === "delete_group") {
@@ -832,21 +794,6 @@ export const historyActions = ({ obj, undo = null }: any) => {
 
                 const template = clone(get(templates)[templateId])
                 const hasTextContent = Object.values(slides || {}).some((currentSlide: any) => currentSlide?.items?.some((item: any) => Array.isArray(item?.lines) && item.lines.length))
-
-                if (!hasTextContent && obj.save === false) {
-                    const validSlideIds = new Set(Object.keys(show.slides || {}))
-                    Object.keys(show.layouts || {}).forEach((layoutId) => {
-                        const currentLayout = show.layouts[layoutId]
-                        if (!currentLayout?.slides?.length) return
-                        currentLayout.slides = currentLayout.slides.filter((layoutSlide: any) => validSlideIds.has(layoutSlide.id))
-                    })
-
-                    showsCache.update((a) => {
-                        a[data.remember.showId] = show
-                        return a
-                    })
-                    return
-                }
 
                 const maxLines = template?.settings?.maxLinesPerSlide
                 if (hasTextContent && maxLines !== "0" && !isNaN(Number(maxLines))) {
