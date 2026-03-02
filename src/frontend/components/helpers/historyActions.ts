@@ -2,7 +2,7 @@ import { get } from "svelte/store"
 import { uid } from "uid"
 import type { Item, Slide, SlideData, Template } from "../../../types/Show"
 import { breakLongLines, removeItemValues } from "../../show/slides"
-import { activeEdit, activePage, activePopup, activeProject, activeShow, alertMessage, cachedShowsData, deletedShows, groups, notFound, projects, refreshEditSlide, renamedShows, shows, showsCache, templates } from "../../stores"
+import { activeEdit, activePage, activePopup, activeProject, activeShow, alertMessage, cachedShowsData, deletedShows, groups, notFound, projects, refreshEditSlide, renamedShows, saved, shows, showsCache, templates } from "../../stores"
 import { save } from "../../utils/save"
 import { EMPTY_SHOW_SLIDE } from "../../values/empty"
 import { customActionActivation } from "../actions/actions"
@@ -417,8 +417,17 @@ export const historyActions = ({ obj, undo = null }: any) => {
                 if (initializing) save()
                 // delete showsCache (to reduce lag)
                 setTimeout(() => {
-                    showsCache.set({})
-                    activeShow.set(null)
+                    if (!get(saved)) return
+
+                    const currentActiveShow = get(activeShow)
+                    const keepId = currentActiveShow?.type === "show" ? currentActiveShow.id : null
+
+                    showsCache.update((cache) => {
+                        if (keepId && cache[keepId]) return { [keepId]: cache[keepId] }
+                        return {}
+                    })
+
+                    if (!keepId) activeShow.set(null)
                 }, 2000)
             }
 
