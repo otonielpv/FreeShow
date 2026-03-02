@@ -469,8 +469,15 @@ export const historyActions = ({ obj, undo = null }: any) => {
             let layout = data.remember?.layout
             const showLayouts = _show(showId).get("layouts") || {}
             if (!layout || !showLayouts[layout]) {
-                layout = uid()
-                _show(showId).layouts().add(layout, { name: "", notes: "", slides: [] })
+                const existingLayoutIds = Object.keys(showLayouts)
+
+                if (existingLayoutIds.length) {
+                    layout = existingLayoutIds[0]
+                } else {
+                    layout = "default"
+                    _show(showId).layouts().add(layout, { name: "Default", notes: "", slides: [] })
+                }
+
                 _show(showId).set({ key: "settings.activeLayout", value: layout })
                 data.remember.layout = layout
             }
