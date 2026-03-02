@@ -580,6 +580,12 @@ const slideDrop = {
         })
 
         if (center) {
+            const layoutRef = getLayoutRef()
+            const targetSlide = drop.index !== undefined ? layoutRef[drop.index] : null
+            if (!targetSlide) center = false
+        }
+
+        if (center) {
             if (!data[0]) return
             h.id = "showMedia"
 
