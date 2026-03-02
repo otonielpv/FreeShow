@@ -235,9 +235,16 @@ export const dropActions = {
 
         return h
     },
-    all_slides: ({ drag, drop }: Data, h: History) => {
+    all_slides: ({ drag, drop }: Data, h: History, keys?: Keys) => {
         h.location = { page: "show" }
         const templateId = drag.data[0]
+
+        if (drag.id !== "template") {
+            const validAllSlidesDrop = ["media", "files", "camera", "screen", "ndi", "audio", "audio_effect", "show"]
+            if (validAllSlidesDrop.includes(drag.id || "")) {
+                return dropActions.slide({ drag, drop: { ...drop, id: "slides" } }, h, keys)
+            }
+        }
 
         if (drag.id === "template") {
             h.id = "TEMPLATE"
@@ -627,7 +634,8 @@ const slideDrop = {
         }
 
         h.id = "SLIDES"
-        const slides = drag.data.map((a) => ({ id: (a.id?.length > 11 ? "" : a.id) || uid(), group: removeExtension(a.name || ""), color: null, settings: {}, notes: "", items: [] }))
+        if (!data.length) return
+        const slides = data.map((a) => ({ id: uid(), group: removeExtension(a.name || getFileName(a.path || "")), color: null, settings: {}, notes: "", items: [] }))
 
         h.newData = { index: drop.index, data: slides, layout: { backgrounds: data } }
 

@@ -443,7 +443,13 @@ export const historyActions = ({ obj, undo = null }: any) => {
             data = (deleting ? obj.oldData : obj.newData) || {}
 
             if (initializing) {
-                data.remember = { showId: get(activeShow)?.id, layout: _show().get("settings.activeLayout") }
+                const locationShowId = obj.location?.show?.id
+                const locationLayout = obj.location?.layout
+                const activeShowId = get(activeShow)?.id
+                const showId = data.showId || locationShowId || activeShowId
+                const layout = data.layout || locationLayout || (showId ? _show(showId).get("settings.activeLayout") : undefined)
+
+                data.remember = { showId, layout }
             }
 
             let slides = clone(data?.data) || []
