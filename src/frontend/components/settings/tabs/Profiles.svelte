@@ -1,7 +1,8 @@
 <script lang="ts">
     import type { AccessType, Profile } from "../../../../types/Main"
     import { SettingsTabs } from "../../../../types/Tabs"
-    import { activeProfile, categories, folders, overlayCategories, profiles, selectedProfile, special, stageShows, templateCategories } from "../../../stores"
+    import { actionTags, activeProfile, categories, folders, overlayCategories, profiles, selectedProfile, special, stageShows, templateCategories, timers, variables, variableTags } from "../../../stores"
+    import { functionActionTagAccessKey, functionTimerAccessKey, functionVariableAccessKey, functionVariableTagAccessKey } from "../../../utils/profileAccess"
     import { newToast } from "../../../utils/common"
     import { translateText } from "../../../utils/language"
     import { promptCustom } from "../../../utils/popup"
@@ -69,8 +70,6 @@
         if (globalAccess === "none" || globalAccess === "read") inputs[2].disabled = true
         if (globalAccess === "none") inputs[1].disabled = true
 
-        // remove "none"
-        if (id === "functions") inputs.splice(0, 1)
         // remove "read"
         if (id === "settings") inputs.splice(1, 1)
 
@@ -102,8 +101,18 @@
     $: templateCategoryAccess = currentProfile.access.templates || {}
 
     const functions: string[] = ["actions", "timers", "variables", "triggers"]
-    $: functionsList = functions.map((id) => ({ id, name: `tabs.${id}` }))
+    $: functionSectionsList = functions.map((id) => ({ id, name: `tabs.${id}` }))
+    $: actionTagsList = sortByName(keysToID($actionTags)).map((a) => ({ id: functionActionTagAccessKey(a.id), name: `Action tag: ${a.name || "—"}` }))
+    $: variableTagsList = sortByName(keysToID($variableTags)).map((a) => ({ id: functionVariableTagAccessKey(a.id), name: `Variable tag: ${a.name || "—"}` }))
+    $: timersList = sortByName(keysToID($timers)).map((a) => ({ id: functionTimerAccessKey(a.id), name: `Timer: ${a.name || "—"}` }))
+    $: variablesList = sortByName(keysToID($variables)).map((a) => ({ id: functionVariableAccessKey(a.id), name: `Variable: ${a.name || "—"}` }))
+    $: functionsList = [...functionSectionsList, ...actionTagsList, ...variableTagsList, ...timersList, ...variablesList]
     $: functionsAccess = currentProfile.access.functions || {}
+
+    $: mediaAccess = currentProfile.access.media || {}
+    $: audioAccess = currentProfile.access.audio || {}
+    $: scriptureAccess = currentProfile.access.scripture || {}
+    $: calendarAccess = currentProfile.access.calendar || {}
 
     $: stageList = sortByName(keysToID($stageShows)).filter((a) => a.name)
     $: stageAccess = currentProfile.access.stage || {}
@@ -118,13 +127,13 @@
     $: ACCESS_LISTS = [
         { id: "projects", label: "remote.projects", icon: "project", access: projectsAccess, options: accessInputsRW, list: projectsList },
         { id: "shows", label: "tabs.shows", icon: "shows", access: showsCategoryAccess, options: accessInputsRW, list: showsCategoryList },
-        // WIP MEDIA (+subtabs)
-        // WIP AUDIO
+        { id: "media", label: "tabs.media", icon: "media", access: mediaAccess, options: accessInputs, list: [] },
+        { id: "audio", label: "tabs.audio", icon: "audio", access: audioAccess, options: accessInputs, list: [] },
         { id: "overlays", label: "tabs.overlays", icon: "overlays", access: overlayCategoryAccess, options: accessInputsRW, list: overlayCategoryList },
         { id: "templates", label: "tabs.templates", icon: "templates", access: templateCategoryAccess, options: accessInputs, list: templateCategoryList },
-        // WIP SCRIPTURE?
-        // WIP CALENDAR / ACTION / TIMERS
-        { id: "functions", label: "tabs.functions", icon: "functions", access: functionsAccess, options: [], list: functionsList },
+        { id: "scripture", label: "tabs.scripture", icon: "scripture", access: scriptureAccess, options: accessInputs, list: [] },
+        { id: "calendar", label: "tabs.calendar", icon: "calendar", access: calendarAccess, options: accessInputs, list: [] },
+        { id: "functions", label: "tabs.functions", icon: "functions", access: functionsAccess, options: accessInputs, list: functionsList },
         { id: "stage", label: "menu.stage", icon: "stage", access: stageAccess, options: accessInputsRW, list: stageList },
         { id: "settings", label: "menu.settings", icon: "settings", access: settingsAccess, options: [], list: settingsList }
     ]

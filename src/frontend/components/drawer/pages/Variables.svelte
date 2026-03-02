@@ -2,6 +2,7 @@
     import { activePopup, activeVariableTagFilter, disableDragging, labelsDisabled, randomNumberVariable, selected, variables } from "../../../stores"
     import { translateText } from "../../../utils/language"
     import { getAccess } from "../../../utils/profile"
+    import { functionVariableAccessKey, resolveAccessLevel } from "../../../utils/profileAccess"
     import { resetVariable } from "../../actions/apiHelper"
     import { keysToID, sortByName } from "../../helpers/array"
     import Icon from "../../helpers/Icon.svelte"
@@ -19,10 +20,12 @@
     export let searchValue
 
     const profile = getAccess("functions")
-    const readOnly = profile.variables === "read"
+    $: readOnly = resolveAccessLevel(profile, "variables") === "read"
 
     const typeOrder = { number: 1, text: 2 }
-    $: sortedVariables = sortByName(keysToID($variables), "name", true).sort((a, b) => typeOrder[a.type] - typeOrder[b.type])
+    $: sortedVariables = sortByName(keysToID($variables), "name", true)
+        .filter((a) => resolveAccessLevel(profile, functionVariableAccessKey(a.id)) !== "none")
+        .sort((a, b) => typeOrder[a.type] - typeOrder[b.type])
     $: filteredVariablesTags = sortedVariables.filter((a) => !$activeVariableTagFilter.length || (a.tags?.length && !$activeVariableTagFilter.find((tagId) => !a.tags?.includes(tagId))))
     $: filteredVariablesSearch = searchValue.length > 1 ? filteredVariablesTags.filter((a) => a.name.toLowerCase().includes(searchValue.toLowerCase())) : filteredVariablesTags
 
