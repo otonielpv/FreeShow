@@ -100,18 +100,30 @@
     $: templateCategoryList = sortByName(keysToID($templateCategories)).filter((a) => a.name)
     $: templateCategoryAccess = currentProfile.access.templates || {}
 
-    $: functionsList = [
-        { id: "actions", name: "tabs.actions" },
-        ...sortByName(keysToID($actionTags)).map((a) => ({ id: functionActionTagAccessKey(a.id), name: a.name || "—", child: true })),
-
-        { id: "timers", name: "tabs.timers" },
-        ...sortByName(keysToID($timers)).map((a) => ({ id: functionTimerAccessKey(a.id), name: a.name || "—", child: true })),
-
-        { id: "variables", name: "tabs.variables" },
-        ...sortByName(keysToID($variableTags)).map((a) => ({ id: functionVariableTagAccessKey(a.id), name: a.name || "—", child: true })),
-        ...sortByName(keysToID($variables)).map((a) => ({ id: functionVariableAccessKey(a.id), name: a.name || "—", child: true })),
-
-        { id: "triggers", name: "tabs.triggers" }
+    $: functionsGroups = [
+        {
+            id: "actions",
+            name: "tabs.actions",
+            list: sortByName(keysToID($actionTags)).map((a) => ({ id: functionActionTagAccessKey(a.id), name: a.name || "—" }))
+        },
+        {
+            id: "timers",
+            name: "tabs.timers",
+            list: sortByName(keysToID($timers)).map((a) => ({ id: functionTimerAccessKey(a.id), name: a.name || "—" }))
+        },
+        {
+            id: "variables",
+            name: "tabs.variables",
+            list: [
+                ...sortByName(keysToID($variableTags)).map((a) => ({ id: functionVariableTagAccessKey(a.id), name: a.name || "—" })),
+                ...sortByName(keysToID($variables)).map((a) => ({ id: functionVariableAccessKey(a.id), name: a.name || "—" }))
+            ]
+        },
+        {
+            id: "triggers",
+            name: "tabs.triggers",
+            list: []
+        }
     ]
     $: functionsAccess = currentProfile.access.functions || {}
 
@@ -139,7 +151,7 @@
         { id: "templates", label: "tabs.templates", icon: "templates", access: templateCategoryAccess, options: accessInputs, list: templateCategoryList },
         { id: "scripture", label: "tabs.scripture", icon: "scripture", access: scriptureAccess, options: accessInputs, list: [] },
         { id: "calendar", label: "tabs.calendar", icon: "calendar", access: calendarAccess, options: accessInputs, list: [] },
-        { id: "functions", label: "tabs.functions", icon: "functions", access: functionsAccess, options: accessInputs, list: functionsList },
+        { id: "functions", label: "tabs.functions", icon: "functions", access: functionsAccess, options: accessInputs, list: functionsGroups },
         { id: "stage", label: "menu.stage", icon: "stage", access: stageAccess, options: accessInputsRW, list: stageList },
         { id: "settings", label: "menu.settings", icon: "settings", access: settingsAccess, options: [], list: settingsList }
     ]
@@ -204,11 +216,27 @@
             <MaterialMultiButtons label={a.label} icon={a.icon} value={a.access.global || "write"} options={a.options} on:click={(e) => updateAccess(a.id, "global", e.detail)} />
 
             <div slot="menu">
-                {#each a.list as item}
-                    <InputRow style={item.child ? "margin-left: 20px;" : ""}>
-                        <MaterialMultiButtons label={item.name} value={getAccessLevel(a.access, item.id)} options={getInputs(a.access.global, a.id)} on:click={(e) => updateAccess(a.id, item.id, e.detail)} noLabels />
-                    </InputRow>
-                {/each}
+                {#if a.id === "functions"}
+                    {#each a.list as group}
+                        <InputRow arrow={!!group.list?.length}>
+                            <MaterialMultiButtons label={group.name} value={getAccessLevel(a.access, group.id)} options={getInputs(a.access.global, a.id)} on:click={(e) => updateAccess(a.id, group.id, e.detail)} noLabels />
+
+                            <div slot="menu">
+                                {#each group.list as item}
+                                    <InputRow style="margin-left: 20px;">
+                                        <MaterialMultiButtons label={item.name} value={getAccessLevel(a.access, item.id)} options={getInputs(a.access.global, a.id)} on:click={(e) => updateAccess(a.id, item.id, e.detail)} noLabels />
+                                    </InputRow>
+                                {/each}
+                            </div>
+                        </InputRow>
+                    {/each}
+                {:else}
+                    {#each a.list as item}
+                        <InputRow>
+                            <MaterialMultiButtons label={item.name} value={getAccessLevel(a.access, item.id)} options={getInputs(a.access.global, a.id)} on:click={(e) => updateAccess(a.id, item.id, e.detail)} noLabels />
+                        </InputRow>
+                    {/each}
+                {/if}
             </div>
         </InputRow>
     {/each}
