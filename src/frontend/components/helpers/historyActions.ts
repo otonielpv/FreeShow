@@ -632,6 +632,12 @@ export const historyActions = ({ obj, undo = null }: any) => {
                                 .slides()
                                 .add([{ ...layoutValue, id: slideId }])
                         }
+                    } else {
+                        // add regular slide to layout (images, videos, etc.)
+                        _show(showId)
+                            .layouts([layout])
+                            .slides()
+                            .add([{ ...layoutValue, id: slideId }])
                     }
 
                     increaseEditIndex()

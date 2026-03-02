@@ -636,8 +636,9 @@ const slideDrop = {
         h.id = "SLIDES"
         if (!data.length) return
         const slides = data.map((a) => ({ id: uid(), group: removeExtension(a.name || getFileName(a.path || "")), color: null, settings: {}, notes: "", items: [] }))
+        const layouts = data.map(() => ({}))
 
-        h.newData = { index: drop.index, data: slides, layout: { backgrounds: data } }
+        h.newData = { index: drop.index, data: slides, layouts, layout: { backgrounds: data } }
 
         return h
     },
