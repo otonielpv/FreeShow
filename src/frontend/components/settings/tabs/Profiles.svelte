@@ -127,11 +127,6 @@
     ]
     $: functionsAccess = currentProfile.access.functions || {}
 
-    $: mediaAccess = currentProfile.access.media || {}
-    $: audioAccess = currentProfile.access.audio || {}
-    $: scriptureAccess = currentProfile.access.scripture || {}
-    $: calendarAccess = currentProfile.access.calendar || {}
-
     $: stageList = sortByName(keysToID($stageShows)).filter((a) => a.name)
     $: stageAccess = currentProfile.access.stage || {}
 
@@ -145,13 +140,9 @@
     $: ACCESS_LISTS = [
         { id: "projects", label: "remote.projects", icon: "project", access: projectsAccess, options: accessInputsRW, list: projectsList },
         { id: "shows", label: "tabs.shows", icon: "shows", access: showsCategoryAccess, options: accessInputsRW, list: showsCategoryList },
-        { id: "media", label: "tabs.media", icon: "media", access: mediaAccess, options: accessInputs, list: [] },
-        { id: "audio", label: "tabs.audio", icon: "audio", access: audioAccess, options: accessInputs, list: [] },
         { id: "overlays", label: "tabs.overlays", icon: "overlays", access: overlayCategoryAccess, options: accessInputsRW, list: overlayCategoryList },
         { id: "templates", label: "tabs.templates", icon: "templates", access: templateCategoryAccess, options: accessInputs, list: templateCategoryList },
-        { id: "scripture", label: "tabs.scripture", icon: "scripture", access: scriptureAccess, options: accessInputs, list: [] },
-        { id: "calendar", label: "tabs.calendar", icon: "calendar", access: calendarAccess, options: accessInputs, list: [] },
-        { id: "functions", label: "tabs.functions", icon: "functions", access: functionsAccess, options: accessInputs, list: functionsGroups },
+        { id: "functions", label: "tabs.functions", icon: "functions", access: functionsAccess, options: [], list: functionsGroups },
         { id: "stage", label: "menu.stage", icon: "stage", access: stageAccess, options: accessInputsRW, list: stageList },
         { id: "settings", label: "menu.settings", icon: "settings", access: settingsAccess, options: [], list: settingsList }
     ]
