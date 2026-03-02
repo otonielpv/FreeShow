@@ -279,7 +279,7 @@
                         {#if color === "BREAK"}
                             <div style="display: block;margin: 10px;width: 100%;"></div>
                         {:else}
-                            <div data-value={color.value} class="pickColor" class:active={!editMode && hexValue.toLowerCase() === color.value.toLowerCase()} class:disabled={disabledColors.includes(color.value)} data-title={color.name} tabindex="0" style="background:{color.value};--outline-color: {getContrast(color.value)};" on:click={() => selectColor(color.value)}>
+                            <div data-value={color.value} class="pickColor" class:active={!editMode && hexValue.toLowerCase() === color.value?.toLowerCase()} class:disabled={disabledColors.includes(color.value)} data-title={color.name} tabindex="0" style="background:{color.value};--outline-color: {getContrast(color.value)};" on:click={() => selectColor(color.value)}>
                                 {#if editMode}
                                     <div class="hover" class:visible={disabledColors.includes(color.value)}>
                                         <Icon id={isCustom ? "delete" : "disable"} white style="fill: {getContrast(color.value)};" />
