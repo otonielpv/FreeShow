@@ -454,8 +454,18 @@ export const historyActions = ({ obj, undo = null }: any) => {
 
             let slides = clone(data?.data) || []
 
-            const { showId, layout } = data.remember || {}
-            if (!showId || !layout) return
+            const { showId } = data.remember || {}
+            if (!showId) return
+
+            let layout = data.remember?.layout
+            const showLayouts = _show(showId).get("layouts") || {}
+            if (!layout || !showLayouts[layout]) {
+                layout = uid()
+                _show(showId).layouts().add(layout, { name: "", notes: "", slides: [] })
+                _show(showId).set({ key: "settings.activeLayout", value: layout })
+                data.remember.layout = layout
+            }
+
             const ref = _show(showId).layouts([layout]).ref()[0] || []
             if (!deleting) data.index = data.index ?? ref.length
             let index = data.index
