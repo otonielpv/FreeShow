@@ -34,8 +34,6 @@
     // UPDATE
 
     function updateAccess(key: string, id: string, accessType: AccessType) {
-        if (!canManagePermissions) return
-
         let data = currentProfile.access
 
         let accessData = data[key] || {}
@@ -62,13 +60,6 @@
         { value: "write", label: "profile.write", icon: "edit" }
     ]
 
-    $: canManagePermissions = !$activeProfile
-
-    function withDisabled(options: { value: string; label: string; icon?: string; disabled?: string }[]) {
-        if (canManagePermissions) return options
-        return options.map((option) => ({ ...option, disabled: "true" }))
-    }
-
     function getInputs(globalAccess: AccessType | undefined, id: string) {
         const inputs = clone(accessInputs).map((a: any) => {
             a.title = translateText(a.name)
@@ -82,7 +73,7 @@
         // remove "read"
         if (id === "settings") inputs.splice(1, 1)
 
-        return withDisabled(inputs)
+        return inputs
     }
 
     function getAccessLevel(a: { [key: string]: AccessType }, id: string) {
@@ -222,7 +213,7 @@
 {:else}
     {#each ACCESS_LISTS as a}
         <InputRow arrow={!!a.list?.length}>
-            <MaterialMultiButtons label={a.label} icon={a.icon} value={a.access.global || "write"} options={withDisabled(a.options)} on:click={(e) => updateAccess(a.id, "global", e.detail)} />
+            <MaterialMultiButtons label={a.label} icon={a.icon} value={a.access.global || "write"} options={a.options} on:click={(e) => updateAccess(a.id, "global", e.detail)} />
 
             <div slot="menu">
                 {#if a.id === "functions"}
