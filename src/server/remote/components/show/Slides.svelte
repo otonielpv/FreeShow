@@ -86,9 +86,15 @@
     const PRELOAD_WAIT_TICKS = 90
     const PRELOAD_MAX_RETRIES = 3
     const REMOTE_THUMBNAIL_SIZE = 120
+    const IOS_SLIDE_THUMBNAIL_TICK_MS = 160
+    let iosImageMode = false
 
     let backgroundRenderLimit = 3
     let backgroundRenderTimer: ReturnType<typeof setInterval> | null = null
+
+    function getSlideThumbKey(index: number) {
+        return `slide-thumb:${$activeShow?.id || ""}:${$activeShow?.settings?.activeLayout || "default"}:${index}`
+    }
 
     function isTargetResolved(target: PreloadTarget) {
         if (!target.sourcePath) return true
@@ -107,6 +113,17 @@
         const queueSet = new Set<string>()
 
         layoutSlides.forEach((layoutSlide: any) => {
+            if (iosImageMode) {
+                const key = getSlideThumbKey(targets.length)
+                targets.push({
+                    key,
+                    sourcePath: key,
+                    requiresThumbnail: true
+                })
+                queueSet.add(String(targets.length - 1))
+                return
+            }
+
             const bgMedia = show.media?.[layoutSlide?.background || ""]
             const bgPath = bgMedia?.path || ""
             const sourcePath = bgMedia?.id || bgPath || ""
@@ -157,7 +174,7 @@
         }
 
         if (!preloadReady) {
-            preloadTimer = setInterval(runPreloadStep, PRELOAD_TICK_MS)
+            preloadTimer = setInterval(runPreloadStep, iosImageMode ? IOS_SLIDE_THUMBNAIL_TICK_MS : PRELOAD_TICK_MS)
         }
     }
 
@@ -211,6 +228,22 @@
 
         currentPreloadPath = preloadQueue[preloadIndex]
         preloadIndex += 1
+        if (iosImageMode) {
+            const index = parseInt(currentPreloadPath, 10)
+            if (!Number.isFinite(index) || index < 0) {
+                currentPreloadPath = ""
+                return
+            }
+
+            send("API:get_slide_thumbnail", {
+                showId: $activeShow?.id,
+                layoutId: $activeShow?.settings?.activeLayout || "default",
+                index,
+                scale: 0.25
+            })
+            return
+        }
+
         send("API:get_thumbnail", { path: currentPreloadPath, size: REMOTE_THUMBNAIL_SIZE })
     }
 
@@ -219,8 +252,15 @@
     }
 
     onMount(() => {
+        const ua = typeof navigator !== "undefined" ? navigator.userAgent || "" : ""
+        const isIOS = /iPad|iPhone|iPod/.test(ua)
+        const isIPadOS = /Macintosh/.test(ua) && typeof navigator !== "undefined" && (navigator as any).maxTouchPoints > 1
+        iosImageMode = isIOS || isIPadOS
+
+        if ($activeShow?.id && layoutSlides.length) resetPreload()
+
         if (!preloadReady && !preloadTimer) {
-            preloadTimer = setInterval(runPreloadStep, PRELOAD_TICK_MS)
+            preloadTimer = setInterval(runPreloadStep, iosImageMode ? IOS_SLIDE_THUMBNAIL_TICK_MS : PRELOAD_TICK_MS)
         }
 
         return () => {
@@ -242,6 +282,8 @@
                 color={slide.color}
                 active={outSlide === i && $outShow?.id === $activeShow?.id}
                 renderBackground={i < backgroundRenderLimit || outSlide === i}
+                slideThumbnailKey={getSlideThumbKey(i)}
+                thumbnailOnly={iosImageMode}
                 {columns}
                 on:click={() => {
                     // if (!$outLocked && !e.ctrlKey) {

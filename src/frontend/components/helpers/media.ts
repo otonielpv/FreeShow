@@ -136,8 +136,9 @@ export async function getSlideThumbnail(data: API_slide_thumbnail, extraOutData:
     if (extraOutData.backgroundImage) output.out.background = { path: extraOutData.backgroundImage }
     if (extraOutData.overlays) output.out.overlays = extraOutData.overlays
 
+    const scale = Math.max(0.2, Math.min(1, Number(data?.scale || 0.5)))
     let resolution: any = getOutputResolution(currentOutput.id)
-    resolution = { width: resolution.width * 0.5, height: resolution.height * 0.5 }
+    resolution = { width: resolution.width * scale, height: resolution.height * scale }
 
     const thumbnail = await requestMain(Main.CAPTURE_SLIDE, { output: { [currentOutput.id]: output }, resolution })
     return thumbnail?.base64 || ""

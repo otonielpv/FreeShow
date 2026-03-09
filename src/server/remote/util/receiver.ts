@@ -385,8 +385,24 @@ export const receiver = {
 
     "API:get_thumbnail": (data: any) => {
         if (!data.path || !data.thumbnail) return
+        _.mediaCache.update((cache: any) => {
+            cache[data.path] = data.thumbnail
+            return cache
+        })
+    },
+    "API:get_slide_thumbnail": (data: any) => {
+        if (!data?.thumbnail) return
 
-        _update("mediaCache", data.path, data.thumbnail)
+        const showId = data.showId || ""
+        const layoutId = data.layoutId || "default"
+        const index = Number.isInteger(data.index) ? data.index : parseInt(String(data.index ?? "-1"), 10)
+        if (!showId || !Number.isFinite(index) || index < 0) return
+
+        const key = `slide-thumb:${showId}:${layoutId}:${index}`
+        _.mediaCache.update((cache: any) => {
+            cache[key] = data.thumbnail
+            return cache
+        })
     },
     "API:get_plain_text": (data: any) => {
         _update("textCache", data.id, data.value)

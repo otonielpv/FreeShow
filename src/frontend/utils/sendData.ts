@@ -74,6 +74,7 @@ export async function sendData(id: Clients, msg: ClientMessage, check = false) {
         const data = await API_ACTIONS[apiId]?.(msg.data)
 
         if (apiId === "get_thumbnail") msg.data.thumbnail = data
+        else if (apiId === "get_slide_thumbnail") msg.data = { ...(msg.data || {}), thumbnail: data }
         else msg.data = data
 
         if (id === "REMOTE" && apiId === "create_show") {

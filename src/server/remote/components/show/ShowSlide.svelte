@@ -1,6 +1,5 @@
 <script lang="ts">
     import { getGroupName } from "../../../common/util/show"
-    import { send } from "../../util/socket"
     import { activeShow, mediaCache } from "../../util/stores"
     import Textbox from "./Textbox.svelte"
     import Zoomed from "./Zoomed.svelte"
@@ -14,6 +13,8 @@
     export let active: boolean = false
     export let resolution: any
     export let renderBackground: boolean = true
+    export let thumbnailOnly: boolean = false
+    export let slideThumbnailKey: string = ""
 
     let ratio = 0
 
@@ -28,7 +29,7 @@
     $: backgroundPath = backgroundMedia?.path || ""
     $: backgroundSourcePath = backgroundMedia?.id || backgroundPath
     $: backgroundIsCachedPath = backgroundPath.includes("freeshow-cache") || backgroundPath.includes("media-cache")
-    $: backgroundImage = !renderBackground ? "" : backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
+    $: backgroundImage = thumbnailOnly ? $mediaCache[slideThumbnailKey] || "" : !renderBackground ? "" : backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
 
     // Thumbnail requests are handled centrally in Slides.svelte to avoid request bursts on iOS.
 </script>
@@ -48,9 +49,11 @@ class:left={overIndex === index && (!selected.length || index <= selected[0])} -
                 {/if}
             </div>
             <!-- TODO: check if showid exists in shows -->
-            {#each slide.items as item}
-                <Textbox {item} />
-            {/each}
+            {#if !thumbnailOnly}
+                {#each slide.items as item}
+                    <Textbox {item} />
+                {/each}
+            {/if}
         </Zoomed>
         <!-- TODO: BG: white, color: black -->
         <!-- style="width: {newResolution.width * zoom}px;" -->
