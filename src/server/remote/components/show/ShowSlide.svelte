@@ -29,15 +29,7 @@
     $: backgroundIsCachedPath = backgroundPath.includes("freeshow-cache") || backgroundPath.includes("media-cache")
     $: backgroundImage = backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
 
-    // Request only nearby/active slide thumbnails first to avoid iPhone memory/network spikes.
-    $: shouldPrefetch = active || index < 6
-    $: if (shouldPrefetch && backgroundIsCachedPath && backgroundSourcePath && !$mediaCache[backgroundSourcePath]) {
-        send("API:get_thumbnail", { path: backgroundSourcePath })
-    }
-
-    $: slide?.items?.forEach((item: any) => {
-        if (shouldPrefetch && item.type === "media" && item.src && !$mediaCache[item.src]) send("API:get_thumbnail", { path: item.src })
-    })
+    // Thumbnail requests are handled centrally in Slides.svelte to avoid request bursts on iOS.
 </script>
 
 <!-- TODO: disabled -->

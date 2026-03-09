@@ -4,7 +4,8 @@
     import Center from "../../../common/components/Center.svelte"
     import { translate } from "../../util/helpers"
     import { GetLayout } from "../../util/output"
-    import { activeShow, outShow, styleRes } from "../../util/stores"
+    import { send } from "../../util/socket"
+    import { activeShow, mediaCache, outShow, styleRes } from "../../util/stores"
     import Slide from "./ShowSlide.svelte"
 
     export let outSlide: number | null
@@ -65,16 +66,107 @@
     }
     const touchend = () => (scaling = false)
 
-    // open tab instantly before loading content
-    let loadingStarted: boolean = false
+    // Sequential thumbnail preload to avoid iOS/WebKit request bursts.
+    let preloadPaths: string[] = []
+    let preloadReady = false
+    let preloadIndex = 0
+    let preloadWaitTicks = 0
+    let currentPreloadPath = ""
+    let preloadTimer: ReturnType<typeof setInterval> | null = null
+
+    $: preloadLoadedCount = preloadPaths.filter((path) => !!$mediaCache[path]).length
+
+    function collectPreloadPaths() {
+        const show = $activeShow
+        if (!show) return []
+
+        const paths = new Set<string>()
+        layoutSlides.forEach((layoutSlide: any) => {
+            const bgMedia = show.media?.[layoutSlide?.background || ""]
+            const bgPath = bgMedia?.id || bgMedia?.path
+            if (bgPath) paths.add(bgPath)
+
+            const slide = show.slides?.[layoutSlide?.id]
+            slide?.items?.forEach((item: any) => {
+                if (item?.type === "media" && item?.src) paths.add(item.src)
+            })
+        })
+
+        return Array.from(paths)
+    }
+
+    function resetPreload() {
+        preloadPaths = collectPreloadPaths()
+        preloadIndex = 0
+        preloadWaitTicks = 0
+        currentPreloadPath = ""
+        preloadReady = preloadPaths.length === 0
+
+        if (preloadTimer) {
+            clearInterval(preloadTimer)
+            preloadTimer = null
+        }
+
+        if (!preloadReady) {
+            preloadTimer = setInterval(runPreloadStep, 35)
+        }
+    }
+
+    function runPreloadStep() {
+        if (preloadReady) return
+
+        if (currentPreloadPath) {
+            if ($mediaCache[currentPreloadPath]) {
+                currentPreloadPath = ""
+                preloadWaitTicks = 0
+                return
+            }
+
+            // Avoid deadlock if one file cannot be thumbnailed.
+            preloadWaitTicks += 1
+            if (preloadWaitTicks > 60) {
+                currentPreloadPath = ""
+                preloadWaitTicks = 0
+            }
+            return
+        }
+
+        while (preloadIndex < preloadPaths.length && $mediaCache[preloadPaths[preloadIndex]]) {
+            preloadIndex += 1
+        }
+
+        if (preloadIndex >= preloadPaths.length) {
+            preloadReady = true
+            if (preloadTimer) {
+                clearInterval(preloadTimer)
+                preloadTimer = null
+            }
+            return
+        }
+
+        currentPreloadPath = preloadPaths[preloadIndex]
+        preloadIndex += 1
+        send("API:get_thumbnail", { path: currentPreloadPath })
+    }
+
+    $: if ($activeShow?.id && layoutSlides.length) {
+        resetPreload()
+    }
+
     onMount(() => {
-        loadingStarted = true
+        if (!preloadReady && !preloadTimer) {
+            preloadTimer = setInterval(runPreloadStep, 35)
+        }
+
+        return () => {
+            if (preloadTimer) clearInterval(preloadTimer)
+        }
     })
 </script>
 
 <div class="grid" on:touchstart={touchstart} on:touchmove={touchmove} on:touchend={touchend}>
     {#if layoutSlides.length}
-        {#if layoutSlides.length < 10 || loadingStarted}
+        {#if preloadReady}
             {#each layoutSlides as slide, i (`${$activeShow?.id || "show"}-${slide.id || "slide"}-${i}`)}
                 <Slide
                     {resolution}
@@ -94,7 +186,7 @@
                 />
             {/each}
         {:else}
-            <Center faded>{translate("remote.loading", $dictionary)}</Center>
+            <Center faded>{translate("remote.loading", $dictionary)} ({preloadLoadedCount}/{preloadPaths.length})</Center>
         {/if}
     {:else}
         <Center faded>{translate("empty.slides", $dictionary)}</Center>
