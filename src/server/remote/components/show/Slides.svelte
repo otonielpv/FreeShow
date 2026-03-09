@@ -85,6 +85,10 @@
     const PRELOAD_TICK_MS = 120
     const PRELOAD_WAIT_TICKS = 90
     const PRELOAD_MAX_RETRIES = 3
+    const REMOTE_THUMBNAIL_SIZE = 120
+
+    let backgroundRenderLimit = 3
+    let backgroundRenderTimer: ReturnType<typeof setInterval> | null = null
 
     function isTargetResolved(target: PreloadTarget) {
         if (!target.sourcePath) return true
@@ -130,10 +134,26 @@
         preloadRetryCount = {}
         preloadAbandoned = new Set<string>()
         preloadReady = preloadTargets.length === 0 || preloadLoadedCount >= preloadTargets.length
+        backgroundRenderLimit = Math.min(3, layoutSlides.length)
 
         if (preloadTimer) {
             clearInterval(preloadTimer)
             preloadTimer = null
+        }
+
+        if (backgroundRenderTimer) {
+            clearInterval(backgroundRenderTimer)
+            backgroundRenderTimer = null
+        }
+
+        if (layoutSlides.length > backgroundRenderLimit) {
+            backgroundRenderTimer = setInterval(() => {
+                backgroundRenderLimit = Math.min(layoutSlides.length, backgroundRenderLimit + 1)
+                if (backgroundRenderLimit >= layoutSlides.length && backgroundRenderTimer) {
+                    clearInterval(backgroundRenderTimer)
+                    backgroundRenderTimer = null
+                }
+            }, 250)
         }
 
         if (!preloadReady) {
@@ -191,7 +211,7 @@
 
         currentPreloadPath = preloadQueue[preloadIndex]
         preloadIndex += 1
-        send("API:get_thumbnail", { path: currentPreloadPath })
+        send("API:get_thumbnail", { path: currentPreloadPath, size: REMOTE_THUMBNAIL_SIZE })
     }
 
     $: if ($activeShow?.id && layoutSlides.length) {
@@ -205,6 +225,7 @@
 
         return () => {
             if (preloadTimer) clearInterval(preloadTimer)
+            if (backgroundRenderTimer) clearInterval(backgroundRenderTimer)
         }
     })
 </script>
@@ -220,6 +241,7 @@
                 index={i}
                 color={slide.color}
                 active={outSlide === i && $outShow?.id === $activeShow?.id}
+                renderBackground={i < backgroundRenderLimit || outSlide === i}
                 {columns}
                 on:click={() => {
                     // if (!$outLocked && !e.ctrlKey) {

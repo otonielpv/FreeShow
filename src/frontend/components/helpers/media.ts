@@ -101,10 +101,12 @@ export function encodeFilePath(path: string): string {
 
 export async function getThumbnail(data: API_media) {
     let path = data.path
+    const requestedSize = Number(data?.size || mediaSize.drawerSize)
+    const size = Math.max(mediaSize.small, Math.min(mediaSize.slideSize, requestedSize))
 
     if (isLocalFile(path)) {
         // Keep remote payloads small by always using generated thumbnails for local media.
-        const thumbPath = await loadThumbnail(path, mediaSize.drawerSize)
+        const thumbPath = await loadThumbnail(path, size)
         if (thumbPath) path = thumbPath
     }
 

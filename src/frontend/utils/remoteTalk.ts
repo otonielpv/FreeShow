@@ -23,6 +23,7 @@ import { sendData, setConnectedState } from "./sendData"
 
 let currentOut = ""
 let loadingShow = ""
+const REMOTE_THUMBNAIL_SIZE = 120
 export const receiveREMOTE: any = {
     PASSWORD: (msg: any) => {
         msg.data = {
@@ -511,7 +512,7 @@ async function preloadRemoteShowThumbnails(connectionId: string, show: any) {
 
     for (const path of paths) {
         try {
-            const thumbnail = await getThumbnail({ path })
+            const thumbnail = await getThumbnail({ path, size: REMOTE_THUMBNAIL_SIZE })
             if (!thumbnail) continue
 
             window.api.send(REMOTE, {

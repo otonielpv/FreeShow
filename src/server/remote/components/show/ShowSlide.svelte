@@ -13,6 +13,7 @@
     export let columns: number = 1
     export let active: boolean = false
     export let resolution: any
+    export let renderBackground: boolean = true
 
     let ratio = 0
 
@@ -27,7 +28,7 @@
     $: backgroundPath = backgroundMedia?.path || ""
     $: backgroundSourcePath = backgroundMedia?.id || backgroundPath
     $: backgroundIsCachedPath = backgroundPath.includes("freeshow-cache") || backgroundPath.includes("media-cache")
-    $: backgroundImage = backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
+    $: backgroundImage = !renderBackground ? "" : backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
 
     // Thumbnail requests are handled centrally in Slides.svelte to avoid request bursts on iOS.
 </script>
@@ -43,7 +44,7 @@ class:left={overIndex === index && (!selected.length || index <= selected[0])} -
             <!-- class:ghost={!background} -->
             <div class="background" style="zoom: {1 / ratio}">
                 {#if backgroundImage}
-                    <img src={backgroundImage} />
+                    <img src={backgroundImage} loading="lazy" decoding="async" />
                 {/if}
             </div>
             <!-- TODO: check if showid exists in shows -->
