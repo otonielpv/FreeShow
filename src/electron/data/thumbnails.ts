@@ -305,6 +305,42 @@ export async function pdfToImage({ filePath }: { filePath: string }) {
     // return images
 }
 
+function getPdfImageFolder(filePath: string) {
+    const pdfName = path.basename(filePath, path.extname(filePath))
+    const pdfImportPath = getDataFolderPath("imports", "PDF")
+    return path.join(pdfImportPath, pdfName)
+}
+
+async function listPdfImagePaths(folderPath: string) {
+    if (!(await doesPathExistAsync(folderPath))) return []
+
+    const entries: string[] = await fs.promises.readdir(folderPath)
+    return entries
+        .filter((name: string) => /\.(jpg|jpeg|png|webp)$/i.test(name))
+        .sort((a: string, b: string) => {
+            const aNum = parseInt(path.basename(a, path.extname(a)), 10)
+            const bNum = parseInt(path.basename(b, path.extname(b)), 10)
+            if (Number.isFinite(aNum) && Number.isFinite(bNum)) return aNum - bNum
+            return a.localeCompare(b)
+        })
+        .map((name: string) => path.join(folderPath, name))
+}
+
+export async function getPdfPagePaths({ filePath }: { filePath: string }) {
+    if (!filePath) return { path: filePath || "", pages: [] }
+
+    const folderPath = getPdfImageFolder(filePath)
+    let pages = await listPdfImagePaths(folderPath)
+
+    // Generate disk pages on first remote usage if they are missing.
+    if (!pages.length && (await doesPathExistAsync(filePath))) {
+        await pdfToImage({ filePath })
+        pages = await listPdfImagePaths(folderPath)
+    }
+
+    return { path: filePath, pages }
+}
+
 // https://www.electronjs.org/docs/latest/api/native-image
 // function captureImage(input: string, output: string, size: ResizeOptions) {
 //     let outputImage = nativeImage.createFromPath(input)

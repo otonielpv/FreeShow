@@ -17,7 +17,7 @@ import { checkIfMediaDownloaded, downloadLessonsMedia, downloadMedia } from "../
 import { importShow } from "../data/import"
 import { save } from "../data/save"
 import { _store, appDataPath, config, createStores, getStore, getStoreValue, setStoreValue } from "../data/store"
-import { captureSlide, doesMediaExist, getThumbnail, getThumbnailFolderPath, pdfToImage, saveImage } from "../data/thumbnails"
+import { captureSlide, doesMediaExist, getPdfPagePaths, getThumbnail, getThumbnailFolderPath, pdfToImage, saveImage } from "../data/thumbnails"
 import { OutputHelper } from "../output/OutputHelper"
 import { libreConvert } from "../output/ppt/libreConverter"
 import { getPresentationApplications, presentationControl, startSlideshow } from "../output/ppt/presentation"
@@ -109,6 +109,7 @@ export const mainResponses: MainResponses = {
     [Main.GET_THUMBNAIL]: async (data) => await getThumbnail(data),
     [Main.SAVE_IMAGE]: (data) => saveImage(data),
     [Main.PDF_TO_IMAGE]: (data) => pdfToImage(data),
+    [Main.PDF_PAGE_PATHS]: (data) => getPdfPagePaths(data),
     [Main.READ_EXIF]: (data) => readExifData(data),
     [Main.MEDIA_CODEC]: (data) => getMediaCodec(data),
     [Main.MEDIA_TRACKS]: (data) => getMediaTracks(data),

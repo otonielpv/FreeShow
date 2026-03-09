@@ -90,6 +90,7 @@ export enum Main {
     GET_THUMBNAIL = "GET_THUMBNAIL",
     SAVE_IMAGE = "SAVE_IMAGE",
     PDF_TO_IMAGE = "PDF_TO_IMAGE",
+    PDF_PAGE_PATHS = "PDF_PAGE_PATHS",
     READ_EXIF = "READ_EXIF",
     MEDIA_CODEC = "MEDIA_CODEC",
     MEDIA_TRACKS = "MEDIA_TRACKS",
@@ -188,6 +189,7 @@ export interface MainSendPayloads {
     [Main.GET_THUMBNAIL]: { input: string; size: number }
     [Main.SAVE_IMAGE]: { id?: string; path?: string; base64?: string; buffer?: ArrayBuffer; filePath?: string[]; format?: "png" | "jpg" }
     [Main.PDF_TO_IMAGE]: { filePath: string }
+    [Main.PDF_PAGE_PATHS]: { filePath: string }
     [Main.READ_EXIF]: { id: string }
     [Main.MEDIA_CODEC]: { path: string }
     [Main.MEDIA_TRACKS]: { path: string }
@@ -297,6 +299,7 @@ export interface MainReturnPayloads {
     [Main.DOES_MEDIA_EXIST]: Promise<{ path: string; exists: boolean; creationTime?: number }>
     [Main.GET_THUMBNAIL]: Promise<{ output: string; input: string; size: number }>
     // [Main.PDF_TO_IMAGE]: Promise<string[]>
+    [Main.PDF_PAGE_PATHS]: Promise<{ path: string; pages: string[] }>
     [Main.READ_EXIF]: Promise<{ id: string; exif: ExifData }>
     [Main.MEDIA_CODEC]: Promise<{ path: string; codecs: string[]; mimeType: string; mimeCodec: string }>
     [Main.MEDIA_TRACKS]: Promise<{ path: string; tracks: Subtitle[] }>

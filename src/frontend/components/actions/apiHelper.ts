@@ -25,6 +25,8 @@ import { _show } from "../helpers/shows"
 import { clearBackground } from "../output/clear"
 import { getPlainEditorText } from "../show/getTextEditor"
 import { getSlideGroups } from "../show/tools/groups"
+import { requestMain } from "../../IPC/main"
+import { Main } from "../../../types/IPC/Main"
 import type { API_add_to_project, API_create_project, API_draw_zoom, API_edit_timer, API_group, API_id_index, API_id_value, API_layout, API_media, API_output_lock, API_rearrange, API_scripture, API_seek, API_slide_index, API_toggle_specific, API_variable } from "./api"
 
 // WIP combine with click() in ShowButton.svelte
@@ -839,6 +841,11 @@ export async function getPDFThumbnails({ path }: API_media) {
 
     loadingTask.destroy()
     return { path, pages }
+}
+
+export async function getPDFDiskPages({ path }: API_media) {
+    if (!path) return { path: "", pages: [] }
+    return await requestMain(Main.PDF_PAGE_PATHS, { filePath: path })
 }
 
 // DRAW

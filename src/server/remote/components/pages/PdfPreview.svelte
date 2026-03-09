@@ -1,18 +1,29 @@
 <script lang="ts">
     import { onMount } from "svelte"
+    import Button from "../../../common/components/Button.svelte"
     import Loader from "../../../common/components/Loader.svelte"
     import { send } from "../../util/socket"
-    import { outData, pdfPages } from "../../util/stores"
+    import { mediaCache, outData, pdfPages } from "../../util/stores"
 
     export let active: any
     export let tablet: boolean = false
 
     $: path = active.id
     $: pages = $pdfPages[path] ? $pdfPages[path] : null
+    $: visiblePages = pages ? pages.slice(0, loadedCount) : []
 
     let loading = true
     $: if (pages) loading = false
     else if (path) loading = true
+
+    let loadedCount = 0
+    const phoneBatchSize = 6
+    const desktopBatchSize = 12
+    const isPhone = window.matchMedia("(max-width: 1000px)").matches
+    const batchSize = isPhone ? phoneBatchSize : desktopBatchSize
+
+    $: if (pages && loadedCount === 0) loadedCount = Math.min(batchSize, pages.length)
+    $: canLoadMore = !!pages && loadedCount < pages.length
 
     let activePage = -1
     $: out = $outData?.slide
@@ -23,8 +34,20 @@
         send("API:play_media", { path, index: page, data: { pageCount: pages?.length } })
     }
 
+    function loadMore() {
+        if (!pages) return
+        loadedCount = Math.min(loadedCount + batchSize, pages.length)
+    }
+
+    $: {
+        if (!visiblePages?.length) return
+        visiblePages.forEach((pagePath) => {
+            if (pagePath && !$mediaCache[pagePath]) send("API:get_thumbnail", { path: pagePath })
+        })
+    }
+
     onMount(() => {
-        send("API:get_pdf_thumbnails", { path })
+        send("API:get_pdf_disk_pages", { path })
     })
 </script>
 
@@ -34,13 +57,25 @@
             <Loader />
         </div>
     {:else if pages}
-        {#each pages as page, i}
+        {#each visiblePages as page, i}
             <div class="main" class:active={activePage === i} style="width: {100 / (pages.length > 1 && tablet ? 3 : pages.length > 1 ? 2 : 1)}%;">
                 <div class="slide" tabindex={0} on:click={() => outputPdf(i)}>
-                    <img src={page} alt="" />
+                    {#if $mediaCache[page]}
+                        <img src={$mediaCache[page]} alt="" />
+                    {:else}
+                        <span class="page-number">{i + 1}</span>
+                    {/if}
                 </div>
             </div>
         {/each}
+
+        {#if canLoadMore}
+            <div class="load-more">
+                <Button on:click={loadMore} center dark>
+                    Load more pages
+                </Button>
+            </div>
+        {/if}
     {/if}
 </div>
 
@@ -135,5 +170,18 @@
     .main.active {
         outline: 2px solid var(--secondary);
         outline-offset: -1px;
+    }
+
+    .page-number {
+        opacity: 0.7;
+        font-size: 1.5em;
+        font-weight: 700;
+    }
+
+    .load-more {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        padding: 10px 0 14px;
     }
 </style>

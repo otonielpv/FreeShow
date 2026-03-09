@@ -432,6 +432,11 @@ export const receiver = {
         _update("pdfPages", data.path, data.pages)
     },
 
+    "API:get_pdf_disk_pages": (data: { path: string; pages: string[] }) => {
+        if (!data?.path || !Array.isArray(data.pages)) return
+        _update("pdfPages", data.path, data.pages)
+    },
+
     "API:create_show": (data: { show: Show; id: string }) => {
         send("SHOW", data.id)
         _set("active", { id: data.id, type: "show" })

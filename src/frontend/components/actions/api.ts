@@ -36,6 +36,7 @@ import {
     editTimer,
     getClearedState,
     getMediaLoopState,
+    getPDFDiskPages,
     getPDFThumbnails,
     getPlainText,
     getShowGroups,
@@ -374,6 +375,7 @@ export const API_ACTIONS = {
 
     get_thumbnail: (data: API_media) => getThumbnail(data),
     get_slide_thumbnail: (data: API_slide_thumbnail) => getSlideThumbnail(data),
+    get_pdf_disk_pages: (data: API_media) => getPDFDiskPages(data),
     get_pdf_thumbnails: (data: API_media) => getPDFThumbnails(data),
     get_cleared: () => getClearedState()
 }
