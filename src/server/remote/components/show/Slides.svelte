@@ -88,12 +88,20 @@
     const REMOTE_THUMBNAIL_SIZE = 120
     const IOS_SLIDE_THUMBNAIL_TICK_MS = 160
     let iosImageMode = false
+    let preloadShowId = ""
+    let preloadLayoutId = "default"
 
     let backgroundRenderLimit = 3
     let backgroundRenderTimer: ReturnType<typeof setInterval> | null = null
 
-    function getSlideThumbKey(index: number) {
-        return `slide-thumb:${$activeShow?.id || ""}:${$activeShow?.settings?.activeLayout || "default"}:${index}`
+    function getSlideThumbKey(index: number, showId = preloadShowId || $activeShow?.id || "", layoutId = preloadLayoutId || $activeShow?.settings?.activeLayout || "default") {
+        return `slide-thumb:${showId}:${layoutId}:${index}`
+    }
+
+    function getSlideIndexFromThumbKey(key: string) {
+        if (!key) return -1
+        const index = parseInt(key.slice(key.lastIndexOf(":") + 1), 10)
+        return Number.isFinite(index) ? index : -1
     }
 
     function isTargetResolved(target: PreloadTarget) {
@@ -109,18 +117,21 @@
         const show = $activeShow
         if (!show) return { targets: [] as PreloadTarget[], queue: [] as string[] }
 
+        preloadShowId = show.id || ""
+        preloadLayoutId = show?.settings?.activeLayout || "default"
+
         const targets: PreloadTarget[] = []
         const queueSet = new Set<string>()
 
-        layoutSlides.forEach((layoutSlide: any) => {
+        layoutSlides.forEach((layoutSlide: any, index: number) => {
             if (iosImageMode) {
-                const key = getSlideThumbKey(targets.length)
+                const key = getSlideThumbKey(index, preloadShowId, preloadLayoutId)
                 targets.push({
                     key,
                     sourcePath: key,
                     requiresThumbnail: true
                 })
-                queueSet.add(String(targets.length - 1))
+                queueSet.add(key)
                 return
             }
 
@@ -229,15 +240,20 @@
         currentPreloadPath = preloadQueue[preloadIndex]
         preloadIndex += 1
         if (iosImageMode) {
-            const index = parseInt(currentPreloadPath, 10)
+            const index = getSlideIndexFromThumbKey(currentPreloadPath)
             if (!Number.isFinite(index) || index < 0) {
                 currentPreloadPath = ""
                 return
             }
 
+            if (!preloadShowId) {
+                currentPreloadPath = ""
+                return
+            }
+
             send("API:get_slide_thumbnail", {
-                showId: $activeShow?.id,
-                layoutId: $activeShow?.settings?.activeLayout || "default",
+                showId: preloadShowId,
+                layoutId: preloadLayoutId,
                 index,
                 scale: 0.25
             })
