@@ -81,6 +81,13 @@ export async function sendData(id: Clients, msg: ClientMessage, check = false) {
             setTimeout(() => window.api.send(id, { channel: "SHOWS", data: get(shows) }))
         }
 
+        if (id === "REMOTE" && apiId === "get_pdf_disk_pages") {
+            console.info("[REMOTE PDF DISK] API:get_pdf_disk_pages", {
+                path: msg.data?.path || "",
+                totalPages: Array.isArray(data?.pages) ? data.pages.length : 0
+            })
+        }
+
         msg.send = true
         if (data === undefined) msg.data = null
     } else if (id === REMOTE) {
