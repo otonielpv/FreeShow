@@ -86,6 +86,7 @@
     const PRELOAD_WAIT_TICKS = 30
     const PRELOAD_MAX_RETRIES = 3
     const REMOTE_THUMBNAIL_SIZE = 160
+    const IOS_REMOTE_THUMBNAIL_SIZE = 110
     let iosImageMode = false
 
     let backgroundRenderLimit = 3
@@ -210,7 +211,7 @@
 
         currentPreloadPath = preloadQueue[preloadIndex]
         preloadIndex += 1
-        send("API:get_thumbnail", { path: currentPreloadPath, size: REMOTE_THUMBNAIL_SIZE })
+        send("API:get_thumbnail", { path: currentPreloadPath, size: iosImageMode ? IOS_REMOTE_THUMBNAIL_SIZE : REMOTE_THUMBNAIL_SIZE })
     }
 
     $: if ($activeShow?.id && layoutSlides.length) {
@@ -245,7 +246,8 @@
                 index={i}
                 color={slide.color}
                 active={outSlide === i && $outShow?.id === $activeShow?.id}
-                renderBackground={i < backgroundRenderLimit || outSlide === i}
+                renderBackground={iosImageMode ? true : i < backgroundRenderLimit || outSlide === i}
+                enableVisibilityRender={iosImageMode}
                 thumbnailOnly={iosImageMode}
                 {columns}
                 on:click={() => {
@@ -257,9 +259,6 @@
             />
         {/each}
 
-        {#if !preloadReady}
-            <div class="preload-status">{translate("remote.loading", $dictionary)} ({preloadLoadedCount}/{preloadTargets.length})</div>
-        {/if}
     {:else}
         <Center faded>{translate("empty.slides", $dictionary)}</Center>
     {/if}
@@ -279,14 +278,4 @@
         align-content: flex-start;
     }
 
-    .preload-status {
-        position: sticky;
-        bottom: 8px;
-        margin: 6px auto 0;
-        padding: 4px 8px;
-        font-size: 0.8em;
-        border-radius: 6px;
-        background: rgb(0 0 0 / 0.45);
-        color: var(--text);
-    }
 </style>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte"
     import { getGroupName } from "../../../common/util/show"
     import { activeShow, mediaCache } from "../../util/stores"
     import Textbox from "./Textbox.svelte"
@@ -14,8 +15,11 @@
     export let resolution: any
     export let renderBackground: boolean = true
     export let thumbnailOnly: boolean = false
+    export let enableVisibilityRender: boolean = false
 
     let ratio = 0
+    let slideElem: HTMLDivElement | null = null
+    let isNearViewport = false
 
     $: isCustomRes = resolution.width !== 1920 || resolution.height !== 1080
     // WIP get layout resolution
@@ -28,7 +32,31 @@
     $: backgroundPath = backgroundMedia?.path || ""
     $: backgroundSourcePath = backgroundMedia?.id || backgroundPath
     $: backgroundIsCachedPath = backgroundPath.includes("freeshow-cache") || backgroundPath.includes("media-cache")
-    $: backgroundImage = !renderBackground ? "" : backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
+    $: shouldRenderNow = renderBackground && (!enableVisibilityRender || isNearViewport || active)
+    $: backgroundImage = !shouldRenderNow ? "" : backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
+
+    onMount(() => {
+        if (!enableVisibilityRender || !slideElem || typeof IntersectionObserver === "undefined") {
+            isNearViewport = true
+            return
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                const entry = entries[0]
+                if (!entry) return
+                isNearViewport = entry.isIntersecting
+            },
+            {
+                root: null,
+                rootMargin: "250px 0px",
+                threshold: 0.01
+            }
+        )
+
+        observer.observe(slideElem)
+        return () => observer.disconnect()
+    })
 
     // Thumbnail requests are handled centrally in Slides.svelte to avoid request bursts on iOS.
 </script>
@@ -38,7 +66,7 @@
 <!-- animate:flip -->
 <!-- class:right={overIndex === index && (!selected.length || index > selected[0])}
 class:left={overIndex === index && (!selected.length || index <= selected[0])} -->
-<div class="main" style="width: {100 / columns}%">
+<div class="main" style="width: {100 / columns}%" bind:this={slideElem}>
     <div class="slide context #slide" class:disabled={layoutSlide.disabled} class:active style="background-color: {color};" tabindex={0} data-index={index} on:click>
         <Zoomed resolution={newResolution} background={slide.settings?.color || (slide.items.length ? "black" : "transparent")} bind:ratio>
             <!-- class:ghost={!background} -->
