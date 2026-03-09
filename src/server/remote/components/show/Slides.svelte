@@ -82,27 +82,14 @@
     let preloadTimer: ReturnType<typeof setInterval> | null = null
     let preloadRetryCount: Record<string, number> = {}
     let preloadAbandoned = new Set<string>()
-    const PRELOAD_TICK_MS = 120
-    const PRELOAD_WAIT_TICKS = 90
+    const PRELOAD_TICK_MS = 70
+    const PRELOAD_WAIT_TICKS = 30
     const PRELOAD_MAX_RETRIES = 3
-    const REMOTE_THUMBNAIL_SIZE = 120
-    const IOS_SLIDE_THUMBNAIL_TICK_MS = 160
+    const REMOTE_THUMBNAIL_SIZE = 160
     let iosImageMode = false
-    let preloadShowId = ""
-    let preloadLayoutId = "default"
 
     let backgroundRenderLimit = 3
     let backgroundRenderTimer: ReturnType<typeof setInterval> | null = null
-
-    function getSlideThumbKey(index: number, showId = preloadShowId || $activeShow?.id || "", layoutId = preloadLayoutId || $activeShow?.settings?.activeLayout || "default") {
-        return `slide-thumb:${showId}:${layoutId}:${index}`
-    }
-
-    function getSlideIndexFromThumbKey(key: string) {
-        if (!key) return -1
-        const index = parseInt(key.slice(key.lastIndexOf(":") + 1), 10)
-        return Number.isFinite(index) ? index : -1
-    }
 
     function isTargetResolved(target: PreloadTarget) {
         if (!target.sourcePath) return true
@@ -117,24 +104,10 @@
         const show = $activeShow
         if (!show) return { targets: [] as PreloadTarget[], queue: [] as string[] }
 
-        preloadShowId = show.id || ""
-        preloadLayoutId = show?.settings?.activeLayout || "default"
-
         const targets: PreloadTarget[] = []
         const queueSet = new Set<string>()
 
-        layoutSlides.forEach((layoutSlide: any, index: number) => {
-            if (iosImageMode) {
-                const key = getSlideThumbKey(index, preloadShowId, preloadLayoutId)
-                targets.push({
-                    key,
-                    sourcePath: key,
-                    requiresThumbnail: true
-                })
-                queueSet.add(key)
-                return
-            }
-
+        layoutSlides.forEach((layoutSlide: any) => {
             const bgMedia = show.media?.[layoutSlide?.background || ""]
             const bgPath = bgMedia?.path || ""
             const sourcePath = bgMedia?.id || bgPath || ""
@@ -184,9 +157,7 @@
             }, 250)
         }
 
-        if (!preloadReady) {
-            preloadTimer = setInterval(runPreloadStep, iosImageMode ? IOS_SLIDE_THUMBNAIL_TICK_MS : PRELOAD_TICK_MS)
-        }
+        if (!preloadReady) preloadTimer = setInterval(runPreloadStep, PRELOAD_TICK_MS)
     }
 
     function runPreloadStep() {
@@ -239,27 +210,6 @@
 
         currentPreloadPath = preloadQueue[preloadIndex]
         preloadIndex += 1
-        if (iosImageMode) {
-            const index = getSlideIndexFromThumbKey(currentPreloadPath)
-            if (!Number.isFinite(index) || index < 0) {
-                currentPreloadPath = ""
-                return
-            }
-
-            if (!preloadShowId) {
-                currentPreloadPath = ""
-                return
-            }
-
-            send("API:get_slide_thumbnail", {
-                showId: preloadShowId,
-                layoutId: preloadLayoutId,
-                index,
-                scale: 0.25
-            })
-            return
-        }
-
         send("API:get_thumbnail", { path: currentPreloadPath, size: REMOTE_THUMBNAIL_SIZE })
     }
 
@@ -275,9 +225,7 @@
 
         if ($activeShow?.id && layoutSlides.length) resetPreload()
 
-        if (!preloadReady && !preloadTimer) {
-            preloadTimer = setInterval(runPreloadStep, iosImageMode ? IOS_SLIDE_THUMBNAIL_TICK_MS : PRELOAD_TICK_MS)
-        }
+        if (!preloadReady && !preloadTimer) preloadTimer = setInterval(runPreloadStep, PRELOAD_TICK_MS)
 
         return () => {
             if (preloadTimer) clearInterval(preloadTimer)
@@ -298,7 +246,6 @@
                 color={slide.color}
                 active={outSlide === i && $outShow?.id === $activeShow?.id}
                 renderBackground={i < backgroundRenderLimit || outSlide === i}
-                slideThumbnailKey={getSlideThumbKey(i)}
                 thumbnailOnly={iosImageMode}
                 {columns}
                 on:click={() => {

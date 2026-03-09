@@ -14,7 +14,6 @@
     export let resolution: any
     export let renderBackground: boolean = true
     export let thumbnailOnly: boolean = false
-    export let slideThumbnailKey: string = ""
 
     let ratio = 0
 
@@ -29,7 +28,7 @@
     $: backgroundPath = backgroundMedia?.path || ""
     $: backgroundSourcePath = backgroundMedia?.id || backgroundPath
     $: backgroundIsCachedPath = backgroundPath.includes("freeshow-cache") || backgroundPath.includes("media-cache")
-    $: backgroundImage = thumbnailOnly ? $mediaCache[slideThumbnailKey] || "" : !renderBackground ? "" : backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
+    $: backgroundImage = !renderBackground ? "" : backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
 
     // Thumbnail requests are handled centrally in Slides.svelte to avoid request bursts on iOS.
 </script>
