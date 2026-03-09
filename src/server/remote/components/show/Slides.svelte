@@ -67,40 +67,69 @@
     const touchend = () => (scaling = false)
 
     // Sequential thumbnail preload to avoid iOS/WebKit request bursts.
-    let preloadPaths: string[] = []
+    type PreloadTarget = {
+        key: string
+        sourcePath: string
+        requiresThumbnail: boolean
+    }
+
+    let preloadTargets: PreloadTarget[] = []
+    let preloadQueue: string[] = []
     let preloadReady = false
     let preloadIndex = 0
     let preloadWaitTicks = 0
     let currentPreloadPath = ""
     let preloadTimer: ReturnType<typeof setInterval> | null = null
+    let preloadRetryCount: Record<string, number> = {}
+    let preloadAbandoned = new Set<string>()
+    const PRELOAD_TICK_MS = 40
+    const PRELOAD_WAIT_TICKS = 70
+    const PRELOAD_MAX_RETRIES = 3
 
-    $: preloadLoadedCount = preloadPaths.filter((path) => !!$mediaCache[path]).length
+    function isTargetResolved(target: PreloadTarget) {
+        if (!target.sourcePath) return true
+        if (!target.requiresThumbnail) return true
+        if (preloadAbandoned.has(target.sourcePath)) return true
+        return !!$mediaCache[target.sourcePath]
+    }
 
-    function collectPreloadPaths() {
+    $: preloadLoadedCount = preloadTargets.filter((target) => isTargetResolved(target)).length
+
+    function collectPreloadData() {
         const show = $activeShow
-        if (!show) return []
+        if (!show) return { targets: [] as PreloadTarget[], queue: [] as string[] }
 
-        const paths = new Set<string>()
+        const targets: PreloadTarget[] = []
+        const queueSet = new Set<string>()
+
         layoutSlides.forEach((layoutSlide: any) => {
             const bgMedia = show.media?.[layoutSlide?.background || ""]
-            const bgPath = bgMedia?.id || bgMedia?.path
-            if (bgPath) paths.add(bgPath)
+            const bgPath = bgMedia?.path || ""
+            const sourcePath = bgMedia?.id || bgPath || ""
+            const requiresThumbnail = bgPath.includes("freeshow-cache") || bgPath.includes("media-cache")
 
-            const slide = show.slides?.[layoutSlide?.id]
-            slide?.items?.forEach((item: any) => {
-                if (item?.type === "media" && item?.src) paths.add(item.src)
+            targets.push({
+                key: String(layoutSlide?.id || targets.length),
+                sourcePath,
+                requiresThumbnail
             })
+
+            if (requiresThumbnail && sourcePath) queueSet.add(sourcePath)
         })
 
-        return Array.from(paths)
+        return { targets, queue: Array.from(queueSet) }
     }
 
     function resetPreload() {
-        preloadPaths = collectPreloadPaths()
+        const data = collectPreloadData()
+        preloadTargets = data.targets
+        preloadQueue = data.queue
         preloadIndex = 0
         preloadWaitTicks = 0
         currentPreloadPath = ""
-        preloadReady = preloadPaths.length === 0
+        preloadRetryCount = {}
+        preloadAbandoned = new Set<string>()
+        preloadReady = preloadTargets.length === 0 || preloadLoadedCount >= preloadTargets.length
 
         if (preloadTimer) {
             clearInterval(preloadTimer)
@@ -108,34 +137,14 @@
         }
 
         if (!preloadReady) {
-            preloadTimer = setInterval(runPreloadStep, 35)
+            preloadTimer = setInterval(runPreloadStep, PRELOAD_TICK_MS)
         }
     }
 
     function runPreloadStep() {
         if (preloadReady) return
 
-        if (currentPreloadPath) {
-            if ($mediaCache[currentPreloadPath]) {
-                currentPreloadPath = ""
-                preloadWaitTicks = 0
-                return
-            }
-
-            // Avoid deadlock if one file cannot be thumbnailed.
-            preloadWaitTicks += 1
-            if (preloadWaitTicks > 60) {
-                currentPreloadPath = ""
-                preloadWaitTicks = 0
-            }
-            return
-        }
-
-        while (preloadIndex < preloadPaths.length && $mediaCache[preloadPaths[preloadIndex]]) {
-            preloadIndex += 1
-        }
-
-        if (preloadIndex >= preloadPaths.length) {
+        if (preloadLoadedCount >= preloadTargets.length) {
             preloadReady = true
             if (preloadTimer) {
                 clearInterval(preloadTimer)
@@ -144,7 +153,43 @@
             return
         }
 
-        currentPreloadPath = preloadPaths[preloadIndex]
+        if (currentPreloadPath) {
+            if ($mediaCache[currentPreloadPath]) {
+                currentPreloadPath = ""
+                preloadWaitTicks = 0
+                return
+            }
+
+            preloadWaitTicks += 1
+            if (preloadWaitTicks > PRELOAD_WAIT_TICKS) {
+                const retryCount = preloadRetryCount[currentPreloadPath] || 0
+                if (retryCount >= PRELOAD_MAX_RETRIES) {
+                    preloadAbandoned.add(currentPreloadPath)
+                } else {
+                    preloadRetryCount[currentPreloadPath] = retryCount + 1
+                    preloadQueue.push(currentPreloadPath)
+                }
+
+                currentPreloadPath = ""
+                preloadWaitTicks = 0
+            }
+            return
+        }
+
+        while (preloadIndex < preloadQueue.length && ($mediaCache[preloadQueue[preloadIndex]] || preloadAbandoned.has(preloadQueue[preloadIndex]))) {
+            preloadIndex += 1
+        }
+
+        if (preloadIndex >= preloadQueue.length) {
+            preloadReady = true
+            if (preloadTimer) {
+                clearInterval(preloadTimer)
+                preloadTimer = null
+            }
+            return
+        }
+
+        currentPreloadPath = preloadQueue[preloadIndex]
         preloadIndex += 1
         send("API:get_thumbnail", { path: currentPreloadPath })
     }
@@ -155,7 +200,7 @@
 
     onMount(() => {
         if (!preloadReady && !preloadTimer) {
-            preloadTimer = setInterval(runPreloadStep, 35)
+            preloadTimer = setInterval(runPreloadStep, PRELOAD_TICK_MS)
         }
 
         return () => {
@@ -186,7 +231,7 @@
                 />
             {/each}
         {:else}
-            <Center faded>{translate("remote.loading", $dictionary)} ({preloadLoadedCount}/{preloadPaths.length})</Center>
+            <Center faded>{translate("remote.loading", $dictionary)} ({preloadLoadedCount}/{preloadTargets.length})</Center>
         {/if}
     {:else}
         <Center faded>{translate("empty.slides", $dictionary)}</Center>
