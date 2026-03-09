@@ -434,6 +434,7 @@ export const receiver = {
 
     "API:get_pdf_disk_pages": (data: { path: string; pages: string[] }) => {
         if (!data?.path || !Array.isArray(data.pages)) return
+        console.info("[REMOTE PDF DISK] receiver", { path: data.path, totalPages: data.pages.length })
         _update("pdfPages", data.path, data.pages)
     },
 

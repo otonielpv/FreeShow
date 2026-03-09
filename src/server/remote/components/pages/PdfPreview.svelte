@@ -46,8 +46,13 @@
     }
 
     onMount(() => {
+        console.info("[REMOTE PDF DISK] requesting disk pages", { path })
         send("API:get_pdf_disk_pages", { path })
     })
+
+    $: if (pages) {
+        console.info("[REMOTE PDF DISK] pages loaded", { path, totalPages: pages.length, loadedCount })
+    }
 </script>
 
 <div class="grid">
