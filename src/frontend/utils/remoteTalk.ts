@@ -5,7 +5,7 @@ import type { ClientMessage } from "../../types/Socket"
 import { AudioPlayer } from "../audio/audioPlayer"
 import { loadJsonBible } from "../components/drawer/bible/scripture"
 import { clone, keysToID, removeDeleted } from "../components/helpers/array"
-import { getBase64Path, getThumbnailPath, mediaSize } from "../components/helpers/media"
+import { getBase64Path, getThumbnail, getThumbnailPath, mediaSize } from "../components/helpers/media"
 import { getAllNormalOutputs, getFirstActiveOutput, setOutput } from "../components/helpers/output"
 import { loadShows } from "../components/helpers/setShow"
 import { getLayoutRef } from "../components/helpers/show"
@@ -110,8 +110,13 @@ export const receiveREMOTE: any = {
         loadingShow = showID
         await loadShows([showID])
         // REMOTE uses thumbnail/cache paths and requests thumbnails on demand.
-        // Avoid sending a second heavy base64 payload that can crash iOS.
-        msg.data = clone({ ...(await convertBackgrounds(get(showsCache)[showID], true)), id: showID })
+        // Avoid sending heavy base64 show payloads that can crash iOS.
+        const preparedShow = clone({ ...(await convertBackgrounds(get(showsCache)[showID], true)), id: showID })
+
+        // Warm the remote media cache before rendering starts on iOS.
+        if (msg.id) await preloadRemoteShowThumbnails(msg.id, preparedShow)
+
+        msg.data = preparedShow
         if (loadingShow !== showID) return
         openShow(showID)
         return msg
@@ -476,4 +481,32 @@ function openShow(id: string) {
     if (Date.now() - lastClickTime < 20000) return
 
     activeShow.set({ id })
+}
+
+async function preloadRemoteShowThumbnails(connectionId: string, show: any) {
+    if (!connectionId || !show?.media) return
+
+    const mediaEntries = Object.values(show.media || {}) as any[]
+    const paths = Array.from(
+        new Set(
+            mediaEntries
+                .map((media) => media?.id || media?.path || "")
+                .filter((path) => typeof path === "string" && path.length > 0)
+        )
+    )
+
+    for (const path of paths) {
+        try {
+            const thumbnail = await getThumbnail({ path })
+            if (!thumbnail) continue
+
+            window.api.send(REMOTE, {
+                id: connectionId,
+                channel: "API:get_thumbnail",
+                data: { path, thumbnail }
+            })
+        } catch (error) {
+            console.warn("REMOTE thumbnail preload failed:", path, error)
+        }
+    }
 }
