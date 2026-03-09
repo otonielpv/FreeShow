@@ -101,8 +101,11 @@ export function encodeFilePath(path: string): string {
 
 export async function getThumbnail(data: API_media) {
     let path = data.path
-    if (videoExtensions.includes(getExtension(path))) {
-        path = getThumbnailPath(path, mediaSize.drawerSize)
+
+    if (isLocalFile(path)) {
+        // Keep remote payloads small by always using generated thumbnails for local media.
+        const thumbPath = await loadThumbnail(path, mediaSize.drawerSize)
+        if (thumbPath) path = thumbPath
     }
 
     return await toDataURL(encodeFilePath(path))

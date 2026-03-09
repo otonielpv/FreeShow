@@ -32,6 +32,8 @@ const serverPorts: { [key in ServerName]: number } = {
 const servers: { [key in ServerName]?: ServerValues } = {}
 const ioServers: { [key in ServerName]?: Server } = {}
 
+const REMOTE_MAX_HTTP_BUFFER_SIZE = 64 * 1024 * 1024
+
 createServers()
 function createServers() {
     const serverList = Object.keys(serverPorts) as ServerName[]
@@ -54,7 +56,10 @@ function createServers() {
             ...servers[id],
             port: serverPorts[id],
             server,
-            io: new Server(server),
+            io: new Server(server, {
+                // Some converted PDF shows can exceed the default 1MB packet limit.
+                maxHttpBufferSize: id === "REMOTE" ? REMOTE_MAX_HTTP_BUFFER_SIZE : 1_000_000
+            }),
             max: 10,
             connections: {},
             data: {}
