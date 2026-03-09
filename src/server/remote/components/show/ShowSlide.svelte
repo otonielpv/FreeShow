@@ -23,6 +23,17 @@
 
     $: name = $activeShow ? getGroupName({ show: $activeShow, showId: $activeShow.id || "" }, layoutSlide.id, slide.group, index) || slide.group || "" : ""
 
+    // Match normal media flow for slide backgrounds: request thumbnail on demand and render from mediaCache.
+    $: backgroundMedia = media?.[layoutSlide?.background || ""] || null
+    $: backgroundPath = backgroundMedia?.path || ""
+    $: backgroundSourcePath = backgroundMedia?.id || backgroundPath
+    $: backgroundIsCachedPath = backgroundPath.includes("freeshow-cache") || backgroundPath.includes("media-cache")
+    $: backgroundImage = backgroundIsCachedPath ? $mediaCache[backgroundSourcePath] || "" : backgroundPath
+
+    $: if (backgroundIsCachedPath && backgroundSourcePath && !$mediaCache[backgroundSourcePath]) {
+        send("API:get_thumbnail", { path: backgroundSourcePath })
+    }
+
     $: slide?.items?.forEach((item: any) => {
         if (item.type === "media" && item.src && !$mediaCache[item.src]) send("API:get_thumbnail", { path: item.src })
     })
@@ -38,8 +49,8 @@ class:left={overIndex === index && (!selected.length || index <= selected[0])} -
         <Zoomed resolution={newResolution} background={slide.settings?.color || (slide.items.length ? "black" : "transparent")} bind:ratio>
             <!-- class:ghost={!background} -->
             <div class="background" style="zoom: {1 / ratio}">
-                {#if media[layoutSlide.background]?.path && !media[layoutSlide.background].path.includes("freeshow-cache") && !media[layoutSlide.background].path.includes("media-cache")}
-                    <img src={media[layoutSlide.background].path} />
+                {#if backgroundImage}
+                    <img src={backgroundImage} />
                 {/if}
             </div>
             <!-- TODO: check if showid exists in shows -->

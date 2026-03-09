@@ -159,6 +159,7 @@
                                         {#if isMediaType(showType)}
                                             <Button
                                                 on:click={() => {
+                                                    console.info("[REMOTE PROJECT] open media item", { id: showId, type: showType, name: show?.name })
                                                     _set("active", show)
                                                     _set("activeTab", "show")
                                                     if (showId && needsThumbnail(showType) && !$mediaCache[showId]) send("API:get_thumbnail", { path: showId })
@@ -183,6 +184,7 @@
                                                 <ShowButton
                                                     class="project-show-button"
                                                     on:click={(e) => {
+                                                        console.info("[REMOTE PROJECT] open show item", { id: showData.id, type: "show", name: showData.name })
                                                         _set("active", show)
                                                         _set("activeTab", "show")
                                                         send("SHOW", e.detail)

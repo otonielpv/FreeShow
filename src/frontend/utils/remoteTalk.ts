@@ -110,15 +110,10 @@ export const receiveREMOTE: any = {
         loadingShow = showID
         await loadShows([showID])
 
-        // send before any backgrounds has loaded
+        // Send a lightweight payload for remote and let the client fetch thumbnails on demand.
         msg.data = clone({ ...(await convertBackgrounds(get(showsCache)[showID], true)), id: showID })
         if (loadingShow !== showID) return
-        window.api.send(REMOTE, msg)
-
-        msg.data = clone({ ...(await convertBackgrounds(get(showsCache)[showID])), id: showID })
-        // send(REMOTE, ["MEDIA"], { media: msg.data.media })
-
-        if (loadingShow !== showID) return
+        console.info("[REMOTE SHOW] lightweight payload sent", { showID, slides: msg.data?.layouts?.[msg.data?.settings?.activeLayout || "default"]?.slides?.length || 0 })
 
         openShow(showID)
         return msg
