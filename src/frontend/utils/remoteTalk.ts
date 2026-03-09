@@ -109,17 +109,10 @@ export const receiveREMOTE: any = {
 
         loadingShow = showID
         await loadShows([showID])
-
-        // send before any backgrounds has loaded
+        // REMOTE uses thumbnail/cache paths and requests thumbnails on demand.
+        // Avoid sending a second heavy base64 payload that can crash iOS.
         msg.data = clone({ ...(await convertBackgrounds(get(showsCache)[showID], true)), id: showID })
         if (loadingShow !== showID) return
-        window.api.send(REMOTE, msg)
-
-        msg.data = clone({ ...(await convertBackgrounds(get(showsCache)[showID])), id: showID })
-        // send(REMOTE, ["MEDIA"], { media: msg.data.media })
-
-        if (loadingShow !== showID) return
-
         openShow(showID)
         return msg
     },
@@ -166,7 +159,7 @@ export const receiveREMOTE: any = {
             if (out && out.id !== "temp") {
                 id = out.id
                 oldOutSlide = id
-                msg.data.show = await convertBackgrounds(get(showsCache)[id], false, true)
+                msg.data.show = await convertBackgrounds(get(showsCache)[id], true, true)
                 msg.data.show.id = id
             }
 
@@ -384,7 +377,7 @@ export async function initializeRemote(id: string) {
     if (out.slide !== null && outSlide?.id && outSlide?.id !== "temp") {
         oldOutSlide = outSlide.id
         // Output & thumbnail
-        out.show = await convertBackgrounds(get(showsCache)[oldOutSlide] || {})
+        out.show = await convertBackgrounds(get(showsCache)[oldOutSlide] || {}, true)
         out.show.id = oldOutSlide
 
         // Send slide thumbnails asynchronously
