@@ -4,11 +4,56 @@ import { receiver, ReceiverKey } from "./receiver"
 
 const socket = io()
 let id: string = ""
+let diagnosticsInstalled = false
+
+function sendClientLog(source: string, level: "info" | "warn" | "error", message: string, extra: Record<string, any> = {}) {
+    try {
+        socket.emit("REMOTE", {
+            id,
+            channel: "CLIENT_LOG",
+            data: {
+                source,
+                level,
+                message: String(message || ""),
+                extra,
+                timestamp: Date.now(),
+                href: typeof window !== "undefined" ? window.location.href : ""
+            }
+        })
+    } catch {
+        // Do not throw from logger path.
+    }
+}
+
+function installDiagnostics() {
+    if (diagnosticsInstalled || typeof window === "undefined") return
+    diagnosticsInstalled = true
+
+    window.addEventListener("error", (event) => {
+        const error = event.error as any
+        sendClientLog("window.error", "error", event.message || error?.message || "Unknown error", {
+            filename: event.filename,
+            line: event.lineno,
+            column: event.colno,
+            stack: error?.stack || null
+        })
+    })
+
+    window.addEventListener("unhandledrejection", (event) => {
+        const reason: any = event.reason
+        sendClientLog("unhandledrejection", "error", reason?.message || String(reason || "Unhandled rejection"), {
+            stack: reason?.stack || null
+        })
+    })
+}
 
 export function initSocket() {
+    installDiagnostics()
+
     socket.on("connect", () => {
         id = socket.id || ""
         console.log("Connected with id:", id)
+        sendClientLog("socket.connect", "info", "Remote client connected")
 
         // try accessing with saved password
         const SAVED_PASSWORD = localStorage.password
@@ -23,7 +68,7 @@ export function initSocket() {
         send("PASSWORD")
     })
 
-    socket.on("REMOTE", (msg) => {
+    socket.on("REMOTE", (msg: any) => {
         let key = msg.channel as ReceiverKey
         if (!receiver[key]) {
             if (msg.data !== null) console.log("Unhandled message:", msg)

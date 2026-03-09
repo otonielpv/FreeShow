@@ -95,6 +95,20 @@ export const receiveREMOTE: any = {
 
         return msg
     },
+    CLIENT_LOG: (msg: any) => {
+        const payload = msg?.data || {}
+        const level = payload.level || "info"
+        const source = payload.source || "remote-client"
+        const message = typeof payload.message === "string" ? payload.message : JSON.stringify(payload.message || "")
+        const connection = msg?.id || "unknown"
+
+        const line = `[REMOTE_CLIENT][${connection}][${source}][${level}] ${message}`
+        if (level === "error") console.error(line)
+        else if (level === "warn") console.warn(line)
+        else console.log(line)
+
+        return
+    },
     // SHOWS: (msg: any) => {
     //   msg.data = filterObjectArray(get(shows), ["name"])
     //   return msg

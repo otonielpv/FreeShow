@@ -82,8 +82,8 @@
     let preloadTimer: ReturnType<typeof setInterval> | null = null
     let preloadRetryCount: Record<string, number> = {}
     let preloadAbandoned = new Set<string>()
-    const PRELOAD_TICK_MS = 40
-    const PRELOAD_WAIT_TICKS = 70
+    const PRELOAD_TICK_MS = 120
+    const PRELOAD_WAIT_TICKS = 90
     const PRELOAD_MAX_RETRIES = 3
 
     function isTargetResolved(target: PreloadTarget) {
@@ -211,27 +211,27 @@
 
 <div class="grid" on:touchstart={touchstart} on:touchmove={touchmove} on:touchend={touchend}>
     {#if layoutSlides.length}
-        {#if preloadReady}
-            {#each layoutSlides as slide, i (`${$activeShow?.id || "show"}-${slide.id || "slide"}-${i}`)}
-                <Slide
-                    {resolution}
-                    media={$activeShow?.media}
-                    layoutSlide={slide}
-                    slide={$activeShow?.slides[slide.id]}
-                    index={i}
-                    color={slide.color}
-                    active={outSlide === i && $outShow?.id === $activeShow?.id}
-                    {columns}
-                    on:click={() => {
-                        // if (!$outLocked && !e.ctrlKey) {
-                        //   outSlide.set({ id, index: i })
-                        // }
-                        click(i)
-                    }}
-                />
-            {/each}
-        {:else}
-            <Center faded>{translate("remote.loading", $dictionary)} ({preloadLoadedCount}/{preloadTargets.length})</Center>
+        {#each layoutSlides as slide, i (`${$activeShow?.id || "show"}-${slide.id || "slide"}-${i}`)}
+            <Slide
+                {resolution}
+                media={$activeShow?.media}
+                layoutSlide={slide}
+                slide={$activeShow?.slides[slide.id]}
+                index={i}
+                color={slide.color}
+                active={outSlide === i && $outShow?.id === $activeShow?.id}
+                {columns}
+                on:click={() => {
+                    // if (!$outLocked && !e.ctrlKey) {
+                    //   outSlide.set({ id, index: i })
+                    // }
+                    click(i)
+                }}
+            />
+        {/each}
+
+        {#if !preloadReady}
+            <div class="preload-status">{translate("remote.loading", $dictionary)} ({preloadLoadedCount}/{preloadTargets.length})</div>
         {/if}
     {:else}
         <Center faded>{translate("empty.slides", $dictionary)}</Center>
@@ -250,5 +250,16 @@
         padding: 5px;
         height: 100%;
         align-content: flex-start;
+    }
+
+    .preload-status {
+        position: sticky;
+        bottom: 8px;
+        margin: 6px auto 0;
+        padding: 4px 8px;
+        font-size: 0.8em;
+        border-radius: 6px;
+        background: rgb(0 0 0 / 0.45);
+        color: var(--text);
     }
 </style>
