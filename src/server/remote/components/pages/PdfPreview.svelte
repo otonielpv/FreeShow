@@ -39,8 +39,7 @@
         loadedCount = Math.min(loadedCount + batchSize, pages.length)
     }
 
-    $: {
-        if (!visiblePages?.length) return
+    $: if (visiblePages?.length) {
         visiblePages.forEach((pagePath) => {
             if (pagePath && !$mediaCache[pagePath]) send("API:get_thumbnail", { path: pagePath })
         })
