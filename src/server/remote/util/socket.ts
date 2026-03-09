@@ -5,6 +5,7 @@ import { receiver, ReceiverKey } from "./receiver"
 const socket = io()
 let id: string = ""
 let diagnosticsInstalled = false
+let heartbeatTimer: ReturnType<typeof setInterval> | null = null
 
 function sendClientLog(source: string, level: "info" | "warn" | "error", message: string, extra: Record<string, any> = {}) {
     try {
@@ -45,6 +46,28 @@ function installDiagnostics() {
             stack: reason?.stack || null
         })
     })
+
+    window.addEventListener("beforeunload", () => {
+        sendClientLog("window.beforeunload", "warn", "Remote page unloading")
+    })
+}
+
+function startHeartbeat() {
+    if (heartbeatTimer) clearInterval(heartbeatTimer)
+
+    heartbeatTimer = setInterval(() => {
+        sendClientLog("heartbeat", "info", "alive", {
+            connected: socket.connected,
+            readyState: document.readyState,
+            visibility: typeof document !== "undefined" ? document.visibilityState : "unknown"
+        })
+    }, 2000)
+}
+
+function stopHeartbeat() {
+    if (!heartbeatTimer) return
+    clearInterval(heartbeatTimer)
+    heartbeatTimer = null
 }
 
 export function initSocket() {
@@ -54,6 +77,7 @@ export function initSocket() {
         id = socket.id || ""
         console.log("Connected with id:", id)
         sendClientLog("socket.connect", "info", "Remote client connected")
+        startHeartbeat()
 
         // try accessing with saved password
         const SAVED_PASSWORD = localStorage.password
@@ -66,6 +90,17 @@ export function initSocket() {
 
         // check if there is a password!
         send("PASSWORD")
+    })
+
+    socket.on("connect_error", (error: any) => {
+        sendClientLog("socket.connect_error", "error", error?.message || "connect_error", {
+            stack: error?.stack || null
+        })
+    })
+
+    socket.on("disconnect", (reason: string) => {
+        sendClientLog("socket.disconnect", "warn", "Remote client disconnected", { reason })
+        stopHeartbeat()
     })
 
     socket.on("REMOTE", (msg: any) => {
