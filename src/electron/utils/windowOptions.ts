@@ -11,7 +11,7 @@ export const loadingOptions: BrowserWindowConstructorOptions = {
     height: 280,
     icon: "public/icon.png",
     transparent: true,
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     resizable: false,
     frame: false,
     webPreferences: {

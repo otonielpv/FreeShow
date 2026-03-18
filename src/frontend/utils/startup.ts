@@ -118,6 +118,8 @@ function autoBackup() {
 }
 
 export function contentProviderSync() {
+    if (import.meta.env.VITE_E2E_DISABLE_PROVIDER_SYNC === "1") return
+
     const providers = [
         { providerId: "planningcenter" as ContentProviderId, scope: "services" },
         { providerId: "churchApps" as ContentProviderId, scope: "plans", data: { shows: get(shows), categories: get(contentProviderData).churchApps?.syncCategories || [] } },

@@ -22,7 +22,7 @@ import { defaultConfig, defaultSettings, defaultSyncedSettings } from "./default
 
 // NOTE: defaults will always replace the keys with any in the default when they are removed
 
-export const config = new Store<Config>({ defaults: defaultConfig })
+export const config = new Store<Config>({ defaults: defaultConfig, cwd: process.env.FS_MOCK_STORE_PATH || undefined })
 
 export const storeFilesData = {
     SHOWS: { fileName: "shows", portable: false, defaults: {} as TrimmedShows, minify: true }, // cache
@@ -281,7 +281,7 @@ export async function migrateConfig() {
 
     // read settings.json at appDataPath
     const settings = JSON.parse(readFile(path.join(appDataPath, "settings.json")) || "{}")
-    const dataPath = settings.dataPath || getDefaultDataFolderRoot()
+    const dataPath = process.env.FS_TEST_DATA_PATH || settings.dataPath || getDefaultDataFolderRoot()
     const showsPath = settings.showsPath
 
     // setStoreValue({ file: "config", key: "dataPath", value: dataPath })
