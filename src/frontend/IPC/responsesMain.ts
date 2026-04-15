@@ -341,7 +341,9 @@ export const mainResponses: MainResponses = {
         const linkKey = data.providerId === "planningcenter" ? "pcoLink" : data.providerId === "churchApps" ? "chumsLink" : data.providerId === "amazinglife" ? "alLink" : ""
         const origin = data.providerId === "planningcenter" ? "pco" : data.providerId
 
-        function updateExistingShow(showId: string, originId: string) {
+        async function updateExistingShow(showId: string, originId: string) {
+            const shouldReloadActiveShow = get(activeShow)?.id === showId && Boolean(get(showsCache)[showId])
+
             // unset if already loaded
             showsCache.update((a) => {
                 if (a[showId]) delete a[showId]
@@ -358,6 +360,8 @@ export const mainResponses: MainResponses = {
 
                 return a
             })
+
+            if (shouldReloadActiveShow) await loadShows([showId])
         }
 
         // CREATE SHOWS
@@ -373,7 +377,7 @@ export const mainResponses: MainResponses = {
                 replaceIds[id] = linkedShow.id
                 if (providerLocalAlways) continue
 
-                updateExistingShow(linkedShow.id, id)
+                await updateExistingShow(linkedShow.id, id)
                 continue
             }
 
@@ -386,7 +390,7 @@ export const mainResponses: MainResponses = {
                 if (useLocal) {
                     replaceIds[id] = existingShow.id
 
-                    updateExistingShow(existingShow.id, id)
+                    await updateExistingShow(existingShow.id, id)
                     continue
                 }
             }
