@@ -57,6 +57,59 @@ type SectionSourceLine = RepeatDelimiterData & {
 
 const chordTokenRegex = /^[A-G](?:#|b)?(?:m|maj|min|sus|add|aug|dim)?\d*(?:\/[A-G](?:#|b)?)?$/i
 
+function normalizeSectionLabel(label: string): string {
+    return label
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-z0-9]+/gi, " ")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLowerCase()
+}
+
+function compactSectionLabel(label: string): string {
+    return normalizeSectionLabel(label).replace(/\s+/g, "")
+}
+
+function isLikelyGenericSectionHeader(line: string): boolean {
+    const trimmed = line.trim().replace(/[:;]+$/, "").trim()
+    if (!trimmed || trimmed.length > 60) return false
+
+    const normalized = normalizeSectionLabel(trimmed)
+    if (!normalized || normalized.includes("  ")) return false
+    if (normalized.split(" ").length > 4) return false
+    if (isChordProgressionLine(trimmed) || getChordLineData(trimmed) || parseInlineBracketLine(trimmed)) return false
+
+    const letters = [...trimmed].filter((char) => char.toLowerCase() !== char.toUpperCase())
+    if (!letters.length) return false
+
+    const uppercaseLetters = letters.filter((char) => char === char.toUpperCase()).length
+    const lowercaseLetters = letters.filter((char) => char === char.toLowerCase()).length
+
+    return /\d/.test(trimmed) || uppercaseLetters >= lowercaseLetters
+}
+
+function getSectionGlobalGroupId(label: string): string {
+    return normalizeSectionLabel(label)
+        .replace(/\bx\d+\b/g, "")
+        .replace(/\d+/g, "")
+        .trim()
+        .replace(/\s+/g, "_")
+}
+
+function getPlanningCenterSectionHeaderLabel(line: string, knownLabels: string[] = []): string | null {
+    const trimmed = line.trim().replace(/[:;]+$/, "").trim()
+    if (!trimmed) return null
+
+    const compactLabel = compactSectionLabel(trimmed)
+    const matchedLabel = knownLabels.find((label) => compactSectionLabel(label) === compactLabel)
+
+    if (matchedLabel) return trimmed
+    if (!knownLabels.length && isLikelyGenericSectionHeader(trimmed)) return trimmed
+
+    return null
+}
+
 function isChordProgressionLine(line: string): boolean {
     const trimmed = line.trim()
     if (!trimmed) return false
@@ -93,7 +146,7 @@ function isChordProgressionLine(line: string): boolean {
     return chordCount >= 2
 }
 
-function parseChordChartIntoSections(chordChart: string): SongSection[] {
+function parseChordChartIntoSections(chordChart: string, knownLabels: string[] = []): SongSection[] {
     const sections: SongSection[] = []
     const lines = chordChart.split(/\r?\n/)
     let currentSectionLabel = ""
@@ -104,10 +157,8 @@ function parseChordChartIntoSections(chordChart: string): SongSection[] {
 
         if (isPlanningCenterKeywordLine(trimmed)) continue
 
-        // Detect section headers (VERSE, CHORUS, BRIDGE, etc.)
-        // Order matters: longer patterns first (PRECORO before PRE, INSTRUMENTAL before INTRO)
-        const sectionMatch = trimmed.match(/^(PRECORO|ESTRIBILLO|INSTRUMENTAL|PUENTE|VERSE|CHORUS|VERSO|CORO|BRIDGE|INTRO|OUTRO|FINAL|PRE|BREAK|TAG|VAMP|INTERLUDE|BREAKDOWN|TURNAROUND|REFRAIN)(\s*\d+)?(?:\s|$)/i)
-        if (sectionMatch) {
+        const sectionLabel = getPlanningCenterSectionHeaderLabel(trimmed, knownLabels)
+        if (sectionLabel) {
             // Save previous section if exists (including sections with only chords)
             if (currentSectionLabel) {
                 const content = currentSectionContent.filter((l) => l.trim()).join("\n")
@@ -118,7 +169,7 @@ function parseChordChartIntoSections(chordChart: string): SongSection[] {
                     })
                 }
             }
-            currentSectionLabel = sectionMatch[0].trim()
+            currentSectionLabel = sectionLabel
             currentSectionContent = []
             continue
         }
@@ -397,24 +448,31 @@ async function processSongItem(item: ProjectItem, itemsEndpoint: string) {
     const sequence = item.custom_arrangement_sequence || song.sequence || []
 
     let sections: SongSection[] = []
+    const fetchedSections: SongSection[] =
+        (
+            await pcoRequest({
+                scope: "services",
+                endpoint: `${arrangementEndpoint}/sections`
+            })
+        )[0]?.attributes.sections || []
+    const normalizedFetchedSections = fetchedSections.map(normalizeSongSection)
+    const knownSectionLabels = Array.from(
+        new Set([...normalizedFetchedSections.map((section) => section.label).filter(Boolean), ...sequence.map((label: any) => String(label)).filter(Boolean)])
+    )
 
     // Use chord_chart as primary source since it contains repeat markers (//)
     if (song.chord_chart) {
-        sections = parseChordChartIntoSections(song.chord_chart)
+        sections = parseChordChartIntoSections(song.chord_chart, knownSectionLabels)
+
+        if (!sections.length) {
+            sections = normalizedFetchedSections
+        }
     } else {
         // Fallback to sections endpoint if no chord_chart
-        sections =
-            (
-                await pcoRequest({
-                    scope: "services",
-                    endpoint: `${arrangementEndpoint}/sections`
-                })
-            )[0]?.attributes.sections || []
+        sections = normalizedFetchedSections
 
         if (!sections.length) {
             sections = sequence.map((id: any) => ({ label: id, lyrics: "" }))
-        } else {
-            sections = sections.map(normalizeSongSection)
         }
     }
 
@@ -444,31 +502,31 @@ function getOrderedSections(sections: SongSection[], sequence: any[]): SongSecti
 
     sections.forEach((section) => {
         const lowerLabel = section.label.toLowerCase()
-        const normalizedLabel = lowerLabel.replace(/\s+/g, " ").trim()
-        const nospaceLabel = normalizedLabel.replace(/\s+/g, "")
+        const normalizedLabel = normalizeSectionLabel(section.label)
+        const compactLabel = compactSectionLabel(section.label)
 
         // Store by all possible variations
         sectionMap[section.label] = section
         sectionMap[lowerLabel] = section
         sectionMap[normalizedLabel] = section
-        sectionMap[nospaceLabel] = section
+        sectionMap[compactLabel] = section
     })
 
     const orderedSections: SongSection[] = []
     const notFoundLabels: Set<string> = new Set()
 
     sequence.forEach((label) => {
-        const normalizedSeqLabel = String(label).toLowerCase().replace(/\s+/g, " ").trim()
-        const nospaceSeqLabel = normalizedSeqLabel.replace(/\s+/g, "")
+        const stringLabel = String(label)
+        const normalizedSeqLabel = normalizeSectionLabel(stringLabel)
+        const compactSeqLabel = compactSectionLabel(stringLabel)
 
         // Try to find matching section with multiple strategies
-        let foundSection = sectionMap[label] || sectionMap[normalizedSeqLabel] || sectionMap[nospaceSeqLabel]
+        let foundSection = sectionMap[stringLabel] || sectionMap[stringLabel.toLowerCase()] || sectionMap[normalizedSeqLabel] || sectionMap[compactSeqLabel]
 
-        // Try flexible matching for variations like "PRECORO 2" vs "PRECORO2"
+        // Try flexible matching for variations like "PRECORO 2" vs "PRECORO2" or "PRE-CHORUS" vs "PRECHORUS"
         if (!foundSection) {
             const matchedKey = Object.keys(sectionMap).find((key) => {
-                const keyNormalized = key.toLowerCase().replace(/\s+/g, "")
-                return keyNormalized === nospaceSeqLabel
+                return compactSectionLabel(key) === compactSeqLabel
             })
             if (matchedKey) {
                 foundSection = sectionMap[matchedKey]
@@ -478,8 +536,8 @@ function getOrderedSections(sections: SongSection[], sequence: any[]): SongSecti
         // Try partial match (useful for variations)
         if (!foundSection) {
             const matchedKey = Object.keys(sectionMap).find((key) => {
-                const keyLower = key.toLowerCase()
-                const labelLower = label.toLowerCase()
+                const keyLower = normalizeSectionLabel(key)
+                const labelLower = normalizedSeqLabel
                 return keyLower.startsWith(labelLower) || labelLower.startsWith(keyLower)
             })
             if (matchedKey) {
@@ -896,7 +954,7 @@ function getShow(SONG_DATA: any, SONG: any, SECTIONS: any[]) {
 
             slides[slideId] = {
                 group: section.label,
-                globalGroup: section.label.toLowerCase(),
+                globalGroup: getSectionGlobalGroupId(section.label),
                 color: null,
                 settings: {},
                 notes: "",
